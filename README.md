@@ -1,7 +1,7 @@
 poise
 =====
 
-A small, experimental library which attempts to push prototypal inheritance to its natural conclusions in JavaScript. For ECMAScript 5.
+A small, experimental library which attempts to push prototypal inheritance to its natural conclusions in JavaScript (for ECMAScript 5).
 
 Example
 -------
