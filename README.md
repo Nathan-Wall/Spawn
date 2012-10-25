@@ -23,19 +23,23 @@ Example
     	}
     });
     
+    // MiniVan inherits all of Vehicle's properties
     var MiniVan = Vehicle.beget({
     	accelleration: 6
     });
     
+    // Racecar also inherits all of Vehicles properties, but it overrides the beget method.
     var Racecar = Vehicle.beget({
     	// Acts as a constructor
     	beget: function(name) {
+            // Use this.base to call Vehicle's beget method.
     		var obj = this.base({ name: name });
     		obj.accelleration = Math.floor(Math.random() * 20 + 40);
     		return obj;
     	}
     });
     
+    // peacockVan inherits from MiniVan
     var peacockVan = MiniVan.beget({
     	name: 'peacock'
     });
@@ -45,7 +49,9 @@ Example
     peacockVan.accellerate(); // => peacock 18
     peacockVan.stop();        // => peacock stopped 0
     
+    // wallaceCar inherits from Racecar
     var wallaceCar = Racecar.beget('wallace');
+    // andyCar also inherits from Racecar
     var andyCar = Racecar.beget('andy');
     
     wallaceCar.start();       // => wallace started [random number]
