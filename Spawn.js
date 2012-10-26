@@ -2,9 +2,7 @@ var Spawn = (function() {
 
 	'use strict';
 
-	var hasOwn = Function.prototype.call.bind(Object.prototype.hasOwnProperty),
-
-		// The prototypical object from which all Spawns inherit.
+	var // The prototypical object from which all Spawns inherit.
 		// Basically, this object provides Spawns with Object.prototype properties, but it also
 		// allows all spawned objects' prototype to be modified directly with Spawn.newProp = value;
 		// We use the syntax below (instead of simply Spawn = { }) so that spawns have the name "Spawn" when logged.
@@ -23,6 +21,7 @@ var Spawn = (function() {
 		lazyTie = Function.prototype.bind.bind(Function.prototype.apply),
 		slice = lazyBind(Array.prototype.slice),
 		isPrototypeOf = lazyBind(Object.prototype.isPrototypeOf),
+		hasOwn = lazyBind(Object.prototype.hasOwnProperty),
 
 		// Creates a wrapper function with the same length as the original.
 		createWrapper = (function() {
@@ -111,6 +110,7 @@ var Spawn = (function() {
 		},
 
 		magicWrap = function magicWrap(f, baseF) {
+			// Wrap a function with one which provides baseF through this.base when called.
 
 			return createWrapper(f, function magicWrapped() {
 
@@ -143,6 +143,8 @@ var Spawn = (function() {
 		},
 
 		contextualize = function contextualize(f/*, arg1, arg2, ... */) {
+			// The opposite of lazyBind, this function returns a wrapper which calls f, passing the wrapper's context as
+			// the first argument to f.
 
 			if (typeof f != 'function')
 				throw new TypeError('Function expected: ' + f);
@@ -202,7 +204,6 @@ var Spawn = (function() {
 						Object.defineProperty(extendWhat, name, withDesc);
 					} else if(whatDesc.writable && withDesc.value) {
 						// If the property is writable and the withDesc has a value, write the value.
-						// TODO: rethink this?
 						extendWhat[name] = withDesc.value;
 					}
 				});
@@ -211,6 +212,26 @@ var Spawn = (function() {
 			return extendWhat;
 
 		};
+
+	if (typeof SpawnExports == 'object') {
+		extend(SpawnExports, {
+			beget: beget,
+			lazyBind: lazyBind,
+			lazyTie: lazyTie,
+			slice: slice,
+			isPrototypeOf: isPrototypeOf,
+			hasOwn: hasOwn,
+			createWrapper: createWrapper,
+			invert: invert,
+			isA: isA,
+			propsToDescriptors: propsToDescriptors,
+			magicWrap: magicWrap,
+			contextualize: contextualize,
+			getUncommonPropertyNames: getUncommonPropertyNames,
+			getPropertyDescriptor: getPropertyDescriptor,
+			extend: extend
+		});
+	}
 
 	return extend(Spawn, {
 
