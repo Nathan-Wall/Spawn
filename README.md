@@ -1,4 +1,4 @@
-poise
+Spawn
 =====
 
 A small, experimental library which attempts to push prototypal inheritance to its natural conclusions in JavaScript (for ECMAScript 5).
@@ -6,11 +6,11 @@ A small, experimental library which attempts to push prototypal inheritance to i
 Example
 -------
 
-    var Vehicle = poise.Thing.beget({
+    var Vehicle = Spawn.beget({
       speed: 0,
-    	accelleration: 10,
+    	acceleration: 10,
     	start: function() {
-    		this.speed = this.accelleration;
+    		this.speed = this.acceleration;
     		console.log(this.name, 'started', this.speed);
     	},
     	stop: function() {
@@ -18,14 +18,14 @@ Example
     		console.log(this.name, 'stopped', this.speed);
     	},
     	accellerate: function() {
-    		this.speed += this.accelleration;
+    		this.speed += this.acceleration;
     		console.log(this.name, this.speed);
     	}
     });
     
     // MiniVan inherits all of Vehicle's properties
     var MiniVan = Vehicle.beget({
-    	accelleration: 6
+    	acceleration: 6
     });
     
     // Racecar also inherits all of Vehicles properties, but it overrides the beget method.
@@ -34,7 +34,7 @@ Example
     	beget: function(name) {
             // Use this.base to call Vehicle's beget method.
     		var obj = this.base({ name: name });
-    		obj.accelleration = Math.floor(Math.random() * 20 + 40);
+    		obj.acceleration = Math.floor(Math.random() * 20 + 40);
     		return obj;
     	}
     });
