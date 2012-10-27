@@ -3,8 +3,8 @@ Spawn
 
 A small, experimental library which attempts to push prototypal inheritance to its natural conclusions in JavaScript (for ECMAScript 5).
 
-The library provides a single object named `Spawn` (unless `SpawnExports` is enabled).
-`Spawn` should be considered a prototype object, and object from which other objects inherit.
+This library provides a single object named `Spawn` (unless `SpawnExports` is enabled).
+`Spawn` should be considered a prototype object, an object from which other objects inherit.
 All objects which inherit from `Spawn` are referred to as `spawns`.
 
 Inheritance (`beget`)
@@ -15,7 +15,7 @@ To create an object which inherits from `Spawn` use `Spawn.beget`.
 	var Pizza = Spawn.beget();
 	// Pizza is an object which inherits from Spawn
 
-To create an object which inherits from another spawn, use `beget`.
+To create an object which inherits from another spawn, use `beget` again.
 
 	var CheesePizza = Pizza.beget();
 	// CheesePizza inherits from Pizza and Spawn
