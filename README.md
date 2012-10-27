@@ -5,7 +5,7 @@ A small, experimental library which attempts to push prototypal inheritance to i
 
 This library provides a single object named `Spawn` (unless `SpawnExports` is enabled).
 `Spawn` should be considered a prototype object, an object from which other objects inherit.
-All objects which inherit from `Spawn` are referred to as `spawns`.
+All objects which inherit from `Spawn` are referred to as spawns.
 
 Inheritance (`beget`)
 ---------------------
