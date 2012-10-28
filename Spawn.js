@@ -1,12 +1,12 @@
-var Spawn = (function() {
+var Unit = (function() {
 
 	'use strict';
 
-	var // The prototypical object from which all Spawns inherit.
-		// Basically, this object provides Spawns with Object.prototype properties, but it also
-		// allows all spawned objects' prototype to be modified directly with Spawn.newProp = value;
-		// We use the syntax below (instead of simply Spawn = { }) so that spawns have the name "Spawn" when logged.
-		Spawn = (function Spawn() { }).prototype,
+	var // The prototypical object from which all Units inherit.
+		// Basically, this object provides Units with Object.prototype properties, but it also
+		// allows all units' prototype to be modified directly with Unit.newProp = value;
+		// We use the syntax below (instead of simply Unit = { }) so that units have the name "Unit" when logged.
+		Unit = (function Unit() { }).prototype,
 
 		beget = function beget(/* proto, props */) {
 
@@ -98,8 +98,8 @@ var Spawn = (function() {
 				var d = Object.getOwnPropertyDescriptor(props, name);
 				d.enumerable = false;
 
-				if (// Only Spawns are magicWrapped to allow a special base method.
-					baseIsObject && Spawn && isA(base, Spawn)
+				if (// Only Units are magicWrapped to allow a special base method.
+					baseIsObject && Unit && isA(base, Unit)
 					&& hasOwn(d, 'value')
 					&& typeof d.value == 'function'
 					&& typeof base[name] == 'function'
@@ -259,18 +259,18 @@ var Spawn = (function() {
 		});
 	}
 
-	return extend(Spawn, {
+	return extend(Unit, {
 
 		beget: contextualize(beget),
-		hatch: function hatch() {
-			// hatch is identical to beget, but doesn't take the properties argument.
-			// This allows for overriding hatch to accept instantiation arguments.
+		spawn: function spawn() {
+			// spawn is identical to beget, but doesn't take the properties argument.
+			// This allows for overriding spawn to accept instantiation arguments.
 			return beget(this);
 		},
 		cast: function cast(value) {
-			if (!isA(this, Spawn)) throw new TypeError('cast can only be called on a Spawn.');
+			if (!isA(this, Unit)) throw new TypeError('cast can only be called on a Unit.');
 			if (isA(value, this)) return value;
-			if (typeof this.hatch == 'function') return this.hatch(value);
+			if (typeof this.spawn == 'function') return this.spawn(value);
 			else return beget(this);
 		},
 
