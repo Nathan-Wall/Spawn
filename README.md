@@ -112,6 +112,26 @@ in order to call the overridden method.
 	B.hi(); // => 'This is A'
 	        // => 'This is B'
 
+hatch
+-----
+
+`hatch` is identical to `beget` except that it doesn't accept any arguments.
+The purpose of `hatch` is to allow overriding so that other arguments can be passed in.
+
+	var Person = Spawn.beget({
+		hatch: function(firstName, lastName) {
+			var obj = this.base();
+			obj.firstName = firstName;
+			obj.lastName = lastName;
+			return obj;
+		},
+		getName: function() {
+			return this.firstName + ' ' + this.lastName;
+		}
+	});
+	var Mike = Person.hatch('Mike', 'Campbell');
+	Mike.getName(); // => 'Mike Campbell'
+
 extend
 ------
 
@@ -195,9 +215,8 @@ Example
 
 	// Racecar also inherits all of Vehicles properties, but it overrides the beget method.
 	var Racecar = Vehicle.beget({
-		// Acts as a constructor
-		beget: function(name) {
-			// Use this.base to call Vehicle's beget method.
+		hatch: function(name) {
+			// Use this.base to call Vehicle's hatch method (which is inherited from Spawn).
 			var obj = this.base({ name: name });
 			obj.acceleration = Math.floor(Math.random() * 20 + 40);
 			return obj;

@@ -39,14 +39,22 @@ var Spawn = (function() {
 
 				if (!generator) {
 
-					for(var i = 0; i < length; i++)
+					for (var i = 0; i < length; i++)
 						args.push('$' + i);
 
-					generator = eval('(function(f, original) { var wrapper = function ' + original.name + '(' + args.join(',') + ') { return f.apply(this, arguments); }; wrapper.original = original; return wrapper; })');
+					generator = eval(
+						'(function(f, original) {'
+							+ 'var wrapper = function ' + original.name + '(' + args.join(',') + ') {'
+								+ 'return f.apply(this, arguments);'
+							+ '};'
+							+ 'wrapper.original = original;'
+							+ 'return wrapper;'
+						+ '})'
+					);
 
-					// Limit the number of generators which are cached to preserve memory in the unusual case that someone
-					// creates many generators. We don't go to lengths to make the cache drop old, unused values as there
-					// really shouldn't be a need for so many generators in the first place.
+					// Limit the number of generators which are cached to preserve memory in the unusual case that
+					// someone creates many generators. We don't go to lengths to make the cache drop old, unused
+					// values as there really shouldn't be a need for so many generators in the first place.
 					if (numGenerators < 64) {
 						generators[length] = generator;
 						numGenerators++;
@@ -90,16 +98,13 @@ var Spawn = (function() {
 				var d = Object.getOwnPropertyDescriptor(props, name);
 				d.enumerable = false;
 
-				if (
-					// Only Spawns are magicWrapped to allow a special base method.
+				if (// Only Spawns are magicWrapped to allow a special base method.
 					protoIsObject && Spawn && isA(proto, Spawn)
 					&& hasOwn(d, 'value')
 					&& typeof d.value == 'function'
 					&& typeof proto[name] == 'function'
 					&& reBase.test(d.value.toString())
-				) {
-					d.value = magicWrap(d.value, proto[name]);
-				}
+				) d.value = magicWrap(d.value, proto[name]);
 
 				desc[name] = d;
 
@@ -190,19 +195,19 @@ var Spawn = (function() {
 
 			var extendWith;
 
-			if(Object(extendWhat) != extendWhat)
+			if (Object(extendWhat) != extendWhat)
 				throw new TypeError('first argument must be an object: ' + extendWhat);
 
-			for(var i = 1; i < arguments.length; i++) {
+			for (var i = 1; i < arguments.length; i++) {
 				extendWith = Object(arguments[i]);
 				getUncommonPropertyNames(extendWith, extendWhat).forEach(function(name) {
 					var whatDesc = getPropertyDescriptor(extendWhat, name),
 						withDesc = getPropertyDescriptor(extendWith, name);
-					if(!whatDesc || whatDesc.configurable) {
+					if (!whatDesc || whatDesc.configurable) {
 						// If extendWhat does not already have the property, or if extendWhat
 						// has the property and it's configurable, add it as is.
 						Object.defineProperty(extendWhat, name, withDesc);
-					} else if(whatDesc.writable && withDesc.value) {
+					} else if (whatDesc.writable && 'value' in withDesc) {
 						// If the property is writable and the withDesc has a value, write the value.
 						extendWhat[name] = withDesc.value;
 					}
@@ -235,13 +240,19 @@ var Spawn = (function() {
 
 	return extend(Spawn, {
 
-		base: function base() {
-			throw new Error('base method called outside of magic method.');
+		beget: contextualize(beget),
+		hatch: function hatch() {
+			// hatch is identical to beget, but doesn't take the properties argument.
+			// This allows for overriding hatch to accept instantiation arguments.
+			return beget(this);
 		},
 
-		beget: contextualize(beget),
 		isA: contextualize(isA),
-		extend: contextualize(extend)
+		extend: contextualize(extend),
+
+		base: function base() {
+			throw new Error('base method called outside of magic method.');
+		}
 
 	});
 
