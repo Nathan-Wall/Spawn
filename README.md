@@ -120,10 +120,10 @@ The purpose of `hatch` is to allow overriding so that other arguments can be pas
 
 	var Person = Spawn.beget({
 		hatch: function(firstName, lastName) {
-			var obj = this.base();
-			obj.firstName = firstName;
-			obj.lastName = lastName;
-			return obj;
+			var spawn = this.base();
+			spawn.firstName = firstName;
+			spawn.lastName = lastName;
+			return spawn;
 		},
 		getName: function() {
 			return this.firstName + ' ' + this.lastName;
@@ -135,7 +135,7 @@ The purpose of `hatch` is to allow overriding so that other arguments can be pas
 extend
 ------
 
-Objects which inherit from `Spawn` also inherit the `extend` method.
+`extend` can be used to extend the properties of a spawn.
 
 	var Santa = Spawn.beget();
 	Santa.extend({
@@ -145,15 +145,50 @@ Objects which inherit from `Spawn` also inherit the `extend` method.
 	});
 	Santa.speak(); // => 'Ho ho ho!'
 
-Properties added with `extend` are added with the same property descriptors used in the object
-passed as the property map argument.
+Properties added with `extend` are non-enumerable.
+
+Methods which are overridden with `extend` can be accessed via the magic `base` method.
+
+	var Ox = Spawn.beget({
+		plow: function() {
+			console.log('plow original');
+		}
+	});
+	Ox.extend({
+		plow: function() {
+			console.log('plow extension');
+			this.base();
+		}
+	});
+	Ox.plow(); // => 'plow extension'
+	           // => 'plow original'
+
+`extend` can be made into a general purpose function.
+
+	var extend = Function.prototype.call.bind(Spawn.extend);
+	var x = { a: 9 };
+	extend(x, { b: 25 };
+	x.b - x.a; // => 16
+
+mixin
+-----
+
+`mixin` is similar to `extend`, but properties added with `mixin` are added with the same property descriptors used in
+the object passed as the property map argument.
+
+	var Santa = Spawn.beget();
+	Santa.mixin({
+		speak: function() {
+			return 'Ho ho ho!';
+		}
+	});
 
 	var descriptor = Object.getOwnPropertyDescriptor(Santa, 'speak');
 	descriptor.enumerable;   // => true
 	descriptor.writable;     // => true
 	descriptor.configurable; // => true
 
-	Santa.extend(Object.freeze({
+	Santa.mixin(Object.freeze({
 		shout: function() {
 			return 'Merry Christmas!';
 		}
@@ -164,15 +199,19 @@ passed as the property map argument.
 	descriptor.configurable; // => false
 
 Note that the above `Object.freeze` doesn't freeze `Santa`; it only freezes the object which is passed
-to `extend`, meaning that when the properties are copied over to `Santa`, they are copied as
+to `mixin`, meaning that when the properties are copied over to `Santa`, they are copied as
 non-writable and non-configurable.
 
-`extend` can also be made into a general purpose function.
+`mixin` can also be made into a general purpose function.
 
-	var extend = Function.prototype.call.bind(Spawn.extend);
+	var mixin = Function.prototype.call.bind(Spawn.mixin);
 	var x = { a: 4 };
-	extend(x, { b: 7 });
+	mixin(x, { b: 7 });
 	x.a + x.b; // => 11
+
+Unlike `extend`, methods overridden with `mixin` CANNOT be accessed with the magic `base` method.
+In this case, if `base` is used, it will refer to whatever it would normally on the original object from which it was
+mixed in.
 
 isA
 ---
@@ -217,9 +256,9 @@ Example
 	var Racecar = Vehicle.beget({
 		hatch: function(name) {
 			// Use this.base to call Vehicle's hatch method (which is inherited from Spawn).
-			var obj = this.base({ name: name });
-			obj.acceleration = Math.floor(Math.random() * 20 + 40);
-			return obj;
+			var spawn = this.base({ name: name });
+			spawn.acceleration = Math.floor(Math.random() * 20 + 40);
+			return spawn;
 		}
 	});
 

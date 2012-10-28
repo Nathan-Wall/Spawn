@@ -87,24 +87,24 @@ var Spawn = (function() {
 
 		reBase = /\.\s*base\b/,
 
-		propsToDescriptors = function propsToDescriptors(props, proto) {
+		propsToDescriptors = function propsToDescriptors(props, base) {
 
 			var desc = { },
 
-				protoIsObject = Object(proto) === proto;
+				baseIsObject = Object(base) === base;
 
-			Object.getOwnPropertyNames(props).forEach(function(name) {
+			getUncommonPropertyNames(props, base).forEach(function(name) {
 
 				var d = Object.getOwnPropertyDescriptor(props, name);
 				d.enumerable = false;
 
 				if (// Only Spawns are magicWrapped to allow a special base method.
-					protoIsObject && Spawn && isA(proto, Spawn)
+					baseIsObject && Spawn && isA(base, Spawn)
 					&& hasOwn(d, 'value')
 					&& typeof d.value == 'function'
-					&& typeof proto[name] == 'function'
+					&& typeof base[name] == 'function'
 					&& reBase.test(d.value.toString())
-				) d.value = magicWrap(d.value, proto[name]);
+				) d.value = magicWrap(d.value, base, name);
 
 				desc[name] = d;
 
@@ -114,38 +114,42 @@ var Spawn = (function() {
 
 		},
 
-		magicWrap = function magicWrap(f, baseF) {
-			// Wrap a function with one which provides baseF through this.base when called.
+		magicWrap = (function() {
 
-			return createWrapper(f, function magicWrapped() {
+			var NONEXISTANT = { };
 
-				var O = Object(this),
-					NONEXISTANT = { },
-					oldBase = NONEXISTANT,
-					changed = false,
-					ret;
+			return function magicWrap(f, base, method) {
+				// Wrap a function with one which provides base[method] through this.base when called.
 
-				if (!hasOwn(O, 'base') || Object.getOwnPropertyDescriptor(O, 'base').writable) {
-					if (hasOwn(O, 'base')) {
-						oldBase = O.base;
+				return createWrapper(f, function magicWrapped() {
+
+					var O = Object(this),
+						oldBase = NONEXISTANT,
+						changed = false,
+						ret;
+
+					if (!hasOwn(O, 'base') || Object.getOwnPropertyDescriptor(O, 'base').writable) {
+						if (hasOwn(O, 'base')) {
+							oldBase = O.base;
+						}
+						O.base = base[method];
+						changed = true
 					}
-					O.base = baseF;
-					changed = true
-				}
 
-				// this is intended instead of O below, to allow calling in non-object context, such as null.
-				ret = f.apply(this, arguments);
+					// this is intended instead of O below, to allow calling in non-object context, such as null.
+					ret = f.apply(this, arguments);
 
-				if (changed) {
-					if (oldBase === NONEXISTANT) delete O.base;
-					else O.base = oldBase;
-				}
+					if (changed) {
+						if (oldBase === NONEXISTANT) delete O.base;
+						else O.base = oldBase;
+					}
 
-				return ret;
+					return ret;
 
-			});
+				});
+			};
 
-		},
+		})(),
 
 		contextualize = function contextualize(f/*, arg1, arg2, ... */) {
 			// The opposite of lazyBind, this function returns a wrapper which calls f, passing the wrapper's context as
@@ -191,27 +195,43 @@ var Spawn = (function() {
 				|| getPropertyDescriptor(Object.getPrototypeOf(obj), name);
 		},
 
-		extend = function extend(extendWhat/*, obj2, obj3, ... */) {
+		mixin = function mixin(mixinWhat/*, mixinWith1, mixinWith2, ... */) {
+
+			var mixinWith;
+
+			if (Object(mixinWhat) != mixinWhat)
+				throw new TypeError('Cannot mixin a non-object: ' + mixinWhat);
+
+			for (var i = 1; i < arguments.length; i++) {
+				mixinWith = Object(arguments[i]);
+				getUncommonPropertyNames(mixinWith, mixinWhat).forEach(function(name) {
+					var whatDesc = getPropertyDescriptor(mixinWhat, name),
+						withDesc = getPropertyDescriptor(mixinWith, name);
+					if (!whatDesc || whatDesc.configurable) {
+						// If mixinWhat does not already have the property, or if mixinWhat
+						// has the property and it's configurable, add it as is.
+						Object.defineProperty(mixinWhat, name, withDesc);
+					} else if (whatDesc.writable && 'value' in withDesc) {
+						// If the property is writable and the withDesc has a value, write the value.
+						mixinWhat[name] = withDesc.value;
+					}
+				});
+			}
+
+			return mixinWhat;
+
+		},
+
+		extend = function extend(extendWhat/*, extendWith1, extendWith2 */) {
 
 			var extendWith;
 
 			if (Object(extendWhat) != extendWhat)
-				throw new TypeError('first argument must be an object: ' + extendWhat);
+				throw new TypeError('Cannot call extend on a non-object: ' + extendWhat);
 
 			for (var i = 1; i < arguments.length; i++) {
 				extendWith = Object(arguments[i]);
-				getUncommonPropertyNames(extendWith, extendWhat).forEach(function(name) {
-					var whatDesc = getPropertyDescriptor(extendWhat, name),
-						withDesc = getPropertyDescriptor(extendWith, name);
-					if (!whatDesc || whatDesc.configurable) {
-						// If extendWhat does not already have the property, or if extendWhat
-						// has the property and it's configurable, add it as is.
-						Object.defineProperty(extendWhat, name, withDesc);
-					} else if (whatDesc.writable && 'value' in withDesc) {
-						// If the property is writable and the withDesc has a value, write the value.
-						extendWhat[name] = withDesc.value;
-					}
-				});
+				Object.defineProperties(extendWhat, propsToDescriptors(extendWith, extendWhat));
 			}
 
 			return extendWhat;
@@ -234,7 +254,8 @@ var Spawn = (function() {
 			contextualize: contextualize,
 			getUncommonPropertyNames: getUncommonPropertyNames,
 			getPropertyDescriptor: getPropertyDescriptor,
-			extend: extend
+			extend: extend,
+			mixin: mixin
 		});
 	}
 
@@ -246,9 +267,16 @@ var Spawn = (function() {
 			// This allows for overriding hatch to accept instantiation arguments.
 			return beget(this);
 		},
+		cast: function cast(value) {
+			if (!isA(this, Spawn)) throw new TypeError('cast can only be called on a Spawn.');
+			if (isA(value, this)) return value;
+			if (typeof this.hatch == 'function') return this.hatch(value);
+			else return beget(this);
+		},
 
 		isA: contextualize(isA),
 		extend: contextualize(extend),
+		mixin: contextualize(mixin),
 
 		base: function base() {
 			throw new Error('base method called outside of magic method.');
