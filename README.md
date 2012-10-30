@@ -1,7 +1,8 @@
 Spawn
 =====
 
-A small, experimental library which attempts to push prototypal inheritance to its natural conclusions in JavaScript (for ECMAScript 5).
+A small, experimental library which attempts to push prototypal inheritance to its natural conclusions in JavaScript
+(for ECMAScript 5).
 
 This library provides a single object named `Unit` (unless `SpawnExports` is enabled).
 `Unit` should be considered a prototype object, an object from which other objects inherit.
@@ -226,6 +227,20 @@ Finally, `Unit` also provides the `isA` method for checking inheritance
 	PepperoniPizza.isA(Santa);            // => false
 
 `isA` can also be made into a generic function in the same way as `beget` and `extend`.
+
+clone
+-----
+
+The `clone` method makes a deep clone of the unit.
+It creates a new object with the same prototype and then clones all **own** properties
+(with the same recursive algorithm) to the new object.
+
+copy
+----
+
+The `copy` method makes a shallow copy of the unit.
+It creates a new object with the same prototype and then copies over **own** properties to the new object.
+Unlike `clone`, `copy` does not make a new object for each property; it simply copies the reference to the same object.
 
 Example
 -------
