@@ -21,9 +21,9 @@ var Unit = (function() {
 		lazyTie = Function.prototype.bind.bind(Function.prototype.apply),
 		slice = lazyBind(Array.prototype.slice),
 		pushAll = lazyTie(Array.prototype.push),
-		isPrototypeOf = lazyBind(Object.prototype.isPrototypeOf),
+		isPrototype = lazyBind(Object.prototype.isPrototypeOf),
 		hasOwn = lazyBind(Object.prototype.hasOwnProperty),
-		getClassOf = lazyBind(Object.prototype.toString),
+		getTagOf = lazyBind(Object.prototype.toString),
 
 		// Creates a wrapper function with the same length as the original.
 		createWrapper = (function() {
@@ -104,7 +104,7 @@ var Unit = (function() {
 			});
 		},
 
-		isA = invert(isPrototypeOf, 2),
+		isA = invert(isPrototype, 2),
 
 		reBase = /\.\s*base\b/,
 
@@ -329,7 +329,7 @@ var Unit = (function() {
 					if (typeof input != 'object' || input === null)
 						return input;
 
-					switch(getClassOf(input)) {
+					switch(getTagOf(input)) {
 
 						case 'Boolean':		output = new Boolean(input.valueOf()); break;
 						case 'Number':		output = new Number(input.valueOf()); break;
@@ -422,9 +422,9 @@ var Unit = (function() {
 			lazyBind: lazyBind,
 			lazyTie: lazyTie,
 			slice: slice,
-			isPrototypeOf: isPrototypeOf,
+			isPrototype: isPrototype,
 			hasOwn: hasOwn,
-			getClassOf: getClassOf,
+			getTagOf: getTagOf,
 			createWrapper: createWrapper,
 			invert: invert,
 			isA: isA,
