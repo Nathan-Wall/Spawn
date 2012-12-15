@@ -1,4 +1,4 @@
-var Unit = (function() {
+var Unit = (function(Object, String, Error, TypeError) {
 
 	'use strict';
 
@@ -8,22 +8,68 @@ var Unit = (function() {
 		// We use the syntax below (instead of simply Unit = { }) so that units have the name "Unit" when logged.
 		Unit = (function Unit() { }).prototype,
 
-		beget = function beget(/* proto, props */) {
-
-			var proto = arguments[0] != null ? Object(arguments[0]) : null,
-				props = arguments[1] != null ? Object(arguments[1]) : null;
-
-			return Object.create(proto, props ? propsToDescriptors(props, proto) : undefined);
-
-		},
+		eval = eval,
+		create = Object.create,
+		keys = Object.keys,
+		getOwnPropertyNames = Object.getOwnPropertyNames,
+		getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor,
+		defineProperty = Object.defineProperty,
+		getPrototypeOf = Object.getPrototypeOf,
+		isExtensible = Object.isExtensible,
 
 		lazyBind = Function.prototype.bind.bind(Function.prototype.call),
 		lazyTie = Function.prototype.bind.bind(Function.prototype.apply),
+
 		slice = lazyBind(Array.prototype.slice),
+		push = lazyBind(Array.prototype.push),
 		pushAll = lazyTie(Array.prototype.push),
+		forEach = lazyBind(Array.prototype.forEach),
+		some = lazyBind(Array.prototype.some),
+		reverse = lazyBind(Array.prototype.reverse),
+
+		join = lazyBind(String.prototype.join),
+
+		call = lazyBind(Function.prototype.call),
+		apply = lazyBind(Function.prototype.apply),
+
 		isPrototype = lazyBind(Object.prototype.isPrototypeOf),
 		hasOwn = lazyBind(Object.prototype.hasOwnProperty),
 		getTagOf = lazyBind(Object.prototype.toString),
+
+		// Returns a clone of an object's own properties without a [[Prototype]].
+		own = function own(obj) {
+			var O = create(null);
+			forEach(getOwnPropertyNames(obj), function(key) {
+				defineProperty(O, key,
+					getOwnPropertyDescriptor(obj, key));
+			});
+			return O;
+		},
+
+		// Can be used to set the value of an object when it is unknown whether a setter has been defined
+		// on that object for the property (or in its prototype chain).
+		set = function set(obj, name, value) {
+			defineProperty(obj, own({
+				value: value,
+				enumerable: false,
+				writable: false,
+				configurable: false
+			}));
+			return value;
+		},
+
+		beget = function beget(/* proto, ...props */) {
+
+			var proto = arguments[0] != null ? Object(arguments[0]) : null,
+				allProps = create(null);
+
+			forEach(slice(arguments, 1), function(props) {
+				mixin(allProps, propsToDescriptors(props, proto));
+			});
+
+			return create(proto, allProps);
+
+		},
 
 		// Creates a wrapper function with the same length as the original.
 		createWrapper = (function() {
@@ -43,20 +89,21 @@ var Unit = (function() {
 
 			return function createWrapper(/* original, length, f */$0, $1) {
 
-				var original = arguments[0],
-					length = typeof arguments[2] != 'undefined' ? arguments[1] : original.length,
-					f = typeof arguments[2] != 'undefined' ? arguments[2] : arguments[1],
+				var original = arguments[0];
 
-					args = [ ],
-					generator = generators[length];
+				if (typeof original != 'function')
+					throw new TypeError('Function expected: ' + original);
+
+				var length = typeof arguments[2] != 'undefined' ? arguments[1] : original.length,
+					f = typeof arguments[2] != 'undefined' ? arguments[2] : arguments[1],
 
 				if (length < 0) length = 0;
 				length = length >>> 0;
 				if (length > MAX_WRAPPER_LENGTH)
 					throw new Error('Maximum length allowed is ' + MAX_WRAPPER_LENGTH + ': ' + length);
 
-				if (typeof original != 'function')
-					throw new TypeError('Function expected: ' + original);
+				var args = [ ],
+					generator = generators[length];
 
 				if (typeof f != 'function')
 					throw new TypeError('Function expected: ' + f);
@@ -64,12 +111,12 @@ var Unit = (function() {
 				if (!generator) {
 
 					for (var i = 0; i < length; i++)
-						args.push('$' + i);
+						push(args, '$' + i);
 
 					generator = eval(
 						'(function(f, original) {'
-							+ 'var wrapper = function ' + original.name + '(' + args.join(',') + ') {'
-								+ 'return f.apply(this, arguments);'
+							+ 'var wrapper = function ' + original.name + '(' + join(args, ',') + ') {'
+								+ 'return apply(f, this, arguments);'
 							+ '};'
 							+ 'wrapper.original = original;'
 							+ 'return wrapper;'
@@ -100,31 +147,30 @@ var Unit = (function() {
 				} else {
 					args = slice(arguments);
 				}
-				return f.apply(null, args.reverse());
+				return apply(f, null, reverse(args));
 			});
 		},
 
-		isA = invert(isPrototype, 2),
+		inherits = invert(isPrototype, 2),
 
 		reBase = /\.\s*base\b/,
 
 		propsToDescriptors = function propsToDescriptors(props, base) {
 
-			var desc = Object.create(null),
+			var desc = create(null),
 
 				baseIsObject = Object(base) === base;
 
-			getUncommonPropertyNames(props, base).forEach(function(name) {
+			forEach(getUncommonPropertyNames(props, base), function(name) {
 
-				var d = Object.getOwnPropertyDescriptor(props, name);
+				var d = own(getOwnPropertyDescriptor(props, name));
 				d.enumerable = false;
 
 				if (// Only Units are magicWrapped to allow a special base method.
-					baseIsObject && Unit && isA(base, Unit)
-					&& hasOwn(d, 'value')
+					baseIsObject && Unit && inherits(base, Unit)
 					&& typeof d.value == 'function'
 					&& typeof base[name] == 'function'
-					&& reBase.test(d.value.toString())
+					&& test(reBase, String(d.value))
 				) d.value = magicWrap(d.value, base, name);
 
 				desc[name] = d;
@@ -149,16 +195,17 @@ var Unit = (function() {
 						changed = false,
 						ret;
 
-					if (!hasOwn(O, 'base') || Object.getOwnPropertyDescriptor(O, 'base').writable) {
+					if (!hasOwn(O, 'base') || getOwnPropertyDescriptor(O, 'base').writable) {
 						if (hasOwn(O, 'base')) {
 							oldBase = O.base;
 						}
-						O.base = base[method];
+						// Use set instead of O.base in case an object in O's prototype chain has a setter named base defined.
+						set(O, 'base', base[method]);
 						changed = true
 					}
 
 					// this is intended instead of O below, to allow calling in non-object context, such as null.
-					ret = f.apply(this, arguments);
+					ret = apply(f, this, arguments);
 
 					if (changed) {
 						if (oldBase === NONEXISTANT) delete O.base;
@@ -190,7 +237,7 @@ var Unit = (function() {
 
 		getUncommonPropertyNames = (function() {
 			return function getUncommonPropertyNames(from, compareWith) {
-				var namesMap = Object.create(null);
+				var namesMap = create(null);
 				return concatUncommonNames(from, compareWith)
 					.filter(function(u) {
 						if (namesMap[u]) return false;
@@ -201,16 +248,16 @@ var Unit = (function() {
 			function concatUncommonNames(from, compareWith) {
 				if (Object(from) != from
 					|| from === compareWith
-					|| isA(compareWith, from)) return [ ];
-				return Object.getOwnPropertyNames(from).concat(
-					concatUncommonNames(Object.getPrototypeOf(from), compareWith));
+					|| inherits(compareWith, from)) return [ ];
+				return getOwnPropertyNames(from).concat(
+					concatUncommonNames(getPrototypeOf(from), compareWith));
 			}
 		})(),
 
 		getPropertyDescriptor = function getPropertyDescriptor(obj, name) {
 			if (Object(obj) !== obj) return undefined;
-			return Object.getOwnPropertyDescriptor(obj, name)
-				|| getPropertyDescriptor(Object.getPrototypeOf(obj), name);
+			return getOwnPropertyDescriptor(obj, name)
+				|| getPropertyDescriptor(getPrototypeOf(obj), name);
 		},
 
 		mixin = function mixin(mixinWhat/*, mixinWith1, mixinWith2, ... */) {
@@ -220,7 +267,7 @@ var Unit = (function() {
 			if (Object(mixinWhat) != mixinWhat)
 				throw new TypeError('Cannot mixin a non-object: ' + mixinWhat);
 
-			if (!Object.isExtensible(mixinWhat))
+			if (!isExtensible(mixinWhat))
 				throw new Error('Cannot mixin on non-exensible object');
 
 			for (var i = 1; i < arguments.length; i++) {
@@ -229,13 +276,13 @@ var Unit = (function() {
 
 				getUncommonPropertyNames(mixinWith, mixinWhat).forEach(function(name) {
 
-					var whatDesc = getPropertyDescriptor(mixinWhat, name),
-						withDesc = getPropertyDescriptor(mixinWith, name);
+					var whatDesc = own(getPropertyDescriptor(mixinWhat, name)),
+						withDesc = own(getPropertyDescriptor(mixinWith, name));
 
 					if (!whatDesc || whatDesc.configurable)
 						// If mixinWhat does not already have the property, or if mixinWhat
 						// has the property and it's configurable, add it as is.
-						Object.defineProperty(mixinWhat, name, withDesc);
+						defineProperty(mixinWhat, name, withDesc);
 					else if (whatDesc.writable && 'value' in withDesc)
 						// If the property is writable and the withDesc has a value, write the value.
 						mixinWhat[name] = withDesc.value;
@@ -254,7 +301,7 @@ var Unit = (function() {
 			if (Object(extendWhat) != extendWhat)
 				throw new TypeError('Cannot call extend on a non-object: ' + extendWhat);
 
-			if (!Object.isExtensible(extendWhat))
+			if (!isExtensible(extendWhat))
 				throw new Error('Cannot extend non-exensible object');
 
 			for (var i = 1; i < arguments.length; i++) {
@@ -264,13 +311,13 @@ var Unit = (function() {
 				descriptors = propsToDescriptors(extendWith, extendWhat);
 
 				// We define these one at a time in case a property on extendWhat is non-configurable.
-				Object.keys(descriptors).forEach(function(name) {
+				keys(descriptors).forEach(function(name) {
 
-					var whatDesc = Object.getOwnPropertyDescriptor(extendWhat, name),
+					var whatDesc = own(getOwnPropertyDescriptor(extendWhat, name)),
 						withDesc = descriptors[name];
 
 					if (!whatDesc || whatDesc.configurable)
-						Object.defineProperty(extendWhat, name, withDesc);
+						defineProperty(extendWhat, name, withDesc);
 					else if (whatDesc.writable && 'value' in withDesc)
 						extendWhat[name] = withDesc.value;
 
@@ -291,9 +338,9 @@ var Unit = (function() {
 
 			// This algorithm simply creates a new object with the same prototype and then mixes in the own properties.
 			// It will also mixin any uncommon properties from other arguments.
-			var args = [ Object.create(Object.getPrototypeOf(copyWhat)) ];
+			var args = [ create(getPrototypeOf(copyWhat)) ];
 			pushAll(args, arguments);
-			return mixin.apply(null, args);
+			return apply(mixin, null, args);
 
 		},
 
@@ -320,7 +367,7 @@ var Unit = (function() {
 					var pair, output, selfClone;
 
 					if (
-						memory.some(function(u) {
+						some(memory, function(u) {
 							var pair = u;
 							return input === pair.source;
 						})
@@ -331,11 +378,11 @@ var Unit = (function() {
 
 					switch(getTagOf(input)) {
 
-						case 'Boolean':		output = new Boolean(input.valueOf()); break;
-						case 'Number':		output = new Number(input.valueOf()); break;
-						case 'String':		output = new String(input.toString()); break;
-						case 'Date':		output = new Date(input.getTime()); break;
-						case 'RegExp':		output = new RegExp(input.toString()); break;
+						case 'Boolean':		output = new Boolean(Value(input)); break;
+						case 'Number':		output = new Number(+input); break;
+						case 'String':		output = new String(String(input)); break;
+						case 'Date':		output = new Date(+input); break;
+						case 'RegExp':		output = new RegExp(String(input)); break;
 						// case File: break;
 						// case Blob: break;
 						// case FileList: break;
@@ -354,7 +401,7 @@ var Unit = (function() {
 
 							// An object can define its own clone method.
 							if($selfClone && (selfClone = input[$selfClone]) && typeof selfClone == 'function') {
-								output = selfClone.call(input);
+								output = call(selfClone, input);
 								// If the object cloned itself, it should take care of copying over the correct own
 								// properties as well. We leave that up to the object to do internally.
 								return output;
@@ -374,26 +421,26 @@ var Unit = (function() {
 								) output = input.cloneNode(true);
 
 							// Create an object with the same prototype as input.
-							else output = Object.create(Object.getPrototypeOf(input));
+							else output = create(getPrototypeOf(input));
 
 							break;
 
 					}
 
-					memory.push({
+					push(memory, {
 						source: input,
 						destination: output
 					});
 
-					Object.getOwnPropertyNames(input).forEach(function(key) {
+					getOwnPropertyNames(input).forEach(function(key) {
 
-						var inputDesc = Object.getOwnPropertyDescriptor(input, key),
+						var inputDesc = own(getOwnPropertyDescriptor(input, key)),
 							clonedPropertyValue;
 
 						if (inputDesc.value) {
 							// Clone the property value for a deep clone.
 							clonedPropertyValue = structuredClone(inputDesc.value, memory);
-							Object.defineProperty(output, key, {
+							defineProperty(output, key, {
 								value: clonedPropertyValue,
 								enumerable: inputDesc.enumerable,
 								writable: inputDesc.writable,
@@ -403,7 +450,7 @@ var Unit = (function() {
 							// For getters and setters we just copy over the descriptor. We expect getters and setters
 							// to be smart enough to work with their given context to produce reasonable values in the
 							// event that they are copied to other objects.
-							Object.defineProperty(output, key, inputDesc);
+							defineProperty(output, key, inputDesc);
 						}
 
 					});
@@ -417,6 +464,7 @@ var Unit = (function() {
 		})();
 
 	if (typeof SpawnExports == 'object') {
+		// TODO: Remove this?
 		extend(SpawnExports, {
 			beget: beget,
 			lazyBind: lazyBind,
@@ -427,7 +475,7 @@ var Unit = (function() {
 			getTagOf: getTagOf,
 			createWrapper: createWrapper,
 			invert: invert,
-			isA: isA,
+			inherits: inherits,
 			propsToDescriptors: propsToDescriptors,
 			magicWrap: magicWrap,
 			contextualize: contextualize,
@@ -451,13 +499,13 @@ var Unit = (function() {
 		copy: contextualize(copy),
 		clone: contextualize(clone),
 		cast: function cast(value) {
-			if (!isA(this, Unit)) throw new TypeError('cast can only be called on a Unit.');
-			if (isA(value, this)) return value;
+			if (!inherits(this, Unit)) throw new TypeError('cast can only be called on a Unit.');
+			if (inherits(value, this)) return value;
 			if (typeof this.spawn == 'function') return this.spawn(value);
 			else return beget(this);
 		},
 
-		isA: contextualize(isA),
+		inherits: contextualize(inherits),
 		extend: contextualize(extend),
 		mixin: contextualize(mixin),
 
@@ -467,4 +515,4 @@ var Unit = (function() {
 
 	});
 
-})();
+})(Object, String, Error, TypeError);
