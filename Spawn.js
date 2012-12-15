@@ -6,7 +6,11 @@ var Unit = (function(Object, String, Error, TypeError) {
 		// Basically, this object provides Units with Object.prototype properties, but it also
 		// allows all units' prototype to be modified directly with Unit.newProp = value;
 		// We use the syntax below (instead of simply Unit = { }) so that units have the name "Unit" when logged.
-		Unit = (function Unit() { }).prototype,
+		Unit = (function() {
+			var proto = (function Unit() { }).prototype;
+			delete proto.constructor;
+			return proto;
+		})(),
 
 		eval = eval,
 		create = Object.create,
@@ -26,6 +30,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 		forEach = lazyBind(Array.prototype.forEach),
 		some = lazyBind(Array.prototype.some),
 		reverse = lazyBind(Array.prototype.reverse),
+		contact = lazyBind(Array.prototype.concat),
 
 		join = lazyBind(String.prototype.join),
 
@@ -249,7 +254,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 				if (Object(from) != from
 					|| from === compareWith
 					|| inherits(compareWith, from)) return [ ];
-				return getOwnPropertyNames(from).concat(
+				return contact(getOwnPropertyNames(from),
 					concatUncommonNames(getPrototypeOf(from), compareWith));
 			}
 		})(),
@@ -274,7 +279,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 
 				mixinWith = Object(arguments[i]);
 
-				getUncommonPropertyNames(mixinWith, mixinWhat).forEach(function(name) {
+				forEach(getUncommonPropertyNames(mixinWith, mixinWhat), (function(name) {
 
 					var whatDesc = own(getPropertyDescriptor(mixinWhat, name)),
 						withDesc = own(getPropertyDescriptor(mixinWith, name));
@@ -311,7 +316,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 				descriptors = propsToDescriptors(extendWith, extendWhat);
 
 				// We define these one at a time in case a property on extendWhat is non-configurable.
-				keys(descriptors).forEach(function(name) {
+				forEach(keys(descriptors), (function(name) {
 
 					var whatDesc = own(getOwnPropertyDescriptor(extendWhat, name)),
 						withDesc = descriptors[name];
@@ -432,7 +437,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 						destination: output
 					});
 
-					getOwnPropertyNames(input).forEach(function(key) {
+					forEach(getOwnPropertyNames(input), function(key) {
 
 						var inputDesc = own(getOwnPropertyDescriptor(input, key)),
 							clonedPropertyValue;
