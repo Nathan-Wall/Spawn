@@ -4,37 +4,37 @@ Spawn
 A small, experimental library which attempts to push prototypal inheritance to its natural conclusions in JavaScript
 (for ECMAScript 5).
 
-This library provides a single object named `Unit` (unless `SpawnExports` is enabled).
-`Unit` should be considered a prototype object, an object from which other objects inherit.
-All objects which inherit from `Unit` are referred to as units.
+This library provides a few basic functions which are oriented toward making prototypal inheritence simple and straight-forward.
 
 Inheritance (`beget`)
 ---------------------
 
-To create an object which inherits from `Unit` use `Unit.beget`.
+To create an object use `beget`.
 
-	var Pizza = Unit.beget();
-	// Pizza is an object which inherits from Unit
+	var Pizza = beget();
+	// Pizza is an object which has no prototype.
 
-To create an object which inherits from another unit, use `beget` again.
+    Object.getPrototypeOf(Pizza); // => null
 
-	var CheesePizza = Pizza.beget();
-	// CheesePizza inherits from Pizza and Unit
+To create an object which inherits from another object, use `beget` again.
+
+	var CheesePizza = beget(Pizza);
+	// CheesePizza inherits from Pizza
 
 The `beget` method accepts one optional argument, a map of properties to add to the new object.
 
-	var PepperoniPizza = Pizza.beget({
+	var PepperoniPizza = beget(Pizza, {
 		toppings: [ 'pepperoni' ]
 	});
 	PepperoniPizza.toppings; // => [ 'pepperoni' ]
 
-	var MediumPepperoniPizza = PepperoniPizza.beget({
-		diameter: '22cm'
+	var MediumPepperoniPizza = beget(PepperoniPizza, {
+		diameter: frozen('22cm')
 	});
 	MediumPepperoniPizza.diameter; // => '22cm'
 	MediumPepperoniPizza.toppings; // => [ 'pepperoni' ]
 
-These properties are, by default, non-enumerable.
+These properties are non-enumerable.
 
 	MediumPepperoniPizza.slices = 8;
 
@@ -44,7 +44,7 @@ These properties are, by default, non-enumerable.
 	// Only logs 'slices'. The other properties ('diameter', 'toppings') are not logged because
 	// they are non-enumerable.
 
-These properties are, however, writable and configurable.
+These properties are, however, writable and configurable (by default).
 
 	MediumPepperoniPizza.diameter = '20cm';
 	delete MediumPepperoniPizza.toppings;
@@ -52,32 +52,16 @@ These properties are, however, writable and configurable.
 	MediumPepperoniPizza.diameter; // => '20cm'
 	MediumPepperoniPizza.toppings; // => undefined
 
-Using `beget` as a Generic Function
-------------------------------------
+Properties inherit a false writable or configurable state.
 
-`beget` is generic and can be used on any object, not just units.
+    FrozenPizza = beget(PepperoniPizza, Object.freeze({
+        thaw: function() { console.log('thawing!'); }
+    }));
 
-	var Person = {
-		getName: function() {
-			return this.firstName + ' ' + this.lastName;
-		}
-	};
+    FrozenPizza.thaw = 1;    // Error: `thaw` is non-writable
+    delete FrozenPizza.thaw; // Error: `thaw` is non-configurable
 
-	var Mike = Unit.beget.call(Person, {
-		firstName: 'Mike',
-		lastName: 'Campbell'
-	});
-
-	Mike.getName(); // => 'Mike Campbell'
-
-If used this way, the object won't inherit the `beget` method because it
-doesn't inherit from `Unit`.
-
-	var John = Mike.beget(); // => Error, beget is not a function
-	// should be: var John = Unit.beget.call(Mike);
-
-To make `beget` easier to access as a function it can be uncontextualized.
-This allows `beget` to function very similarly to `Object.create`, except it has an easier, cleaner
+`beget` is like `Object.create`, except it has an easier, cleaner
 syntax with (we feel) reasonable defaults for the property descriptors.
 
 	var beget = Function.prototype.call.bind(Unit.beget);
@@ -93,53 +77,49 @@ Like `Object.create`, `beget` can be used on `null` to create an object with no 
 	'hasOwnProperty' in x; // => false
 	// x does not inherit from Object (or anything)
 
-base
-----
+`sealed` and `frozen`
+---------------------
 
-Methods which are overridden using `beget` are magically wrapped such that `this.base()` can be called
-in order to call the overridden method.
+A property can be set to be non-configurable or non-writable using `sealed` and `frozen`. The former makes a property non-configurable, while the latter makes a property both non-configurable and non-writable.
 
-	var A = Unit.beget({
-		hi: function() { return 'This is A'; }
-	});
-	var B = A.beget({
-		hi: function() {
-			// Use this.base to call A.hi in the context of B.
-			this.base();
-			return 'This is B';
-		}
-	});
+    var Canine = beget(),
+        Fox = beget(Canine, {
+            color: sealed('red'),
+            trait: frozen('sneaky')
+        });
 
-	B.hi(); // => 'This is A'
-	        // => 'This is B'
+    // `color` is writable
+    Fox.color = 'gray';
+    // But it is not configurable
+    Object.defineProperty(Fox, 'color', { enumerable: true }); // Error
+    // And `trait` is neither writable nor configurable
+    Fox.trait = 'lazy'; // Error
+    Object.defineProperty(Fox, 'trait', { enumerable: true }); // Error
 
-spawn
+`spawn`
 -----
 
-`spawn` is identical to `beget` except that it doesn't accept any arguments.
-The purpose of `spawn` is to allow overriding so that other arguments can be passed in.
+`spawn` is `beget + construct`. It calls `beget` on the first argument and passes any other arguments to an object's `construct` method (if present).
 
-	var Person = Unit.beget({
-		spawn: function(firstName, lastName) {
-			var unit = this.base();
-			unit.firstName = firstName;
-			unit.lastName = lastName;
-			return unit;
+	var Person = beget(null, {
+		construct: function(firstName, lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
 		},
 		getName: function() {
 			return this.firstName + ' ' + this.lastName;
 		}
 	});
-	var Mike = Person.spawn('Mike', 'Campbell');
+	var Mike = spawn(Person, 'Mike', 'Campbell');
 	Mike.getName(); // => 'Mike Campbell'
 
-extend
+`extend`
 ------
 
-`extend` can be used to extend the properties of a unit.
+`extend` can be used to extend the properties of an object.
 
-	var Santa = Unit.beget();
-	Santa.extend({
+	var Santa = beget();
+	extend(Santa, {
 		speak: function() {
 			return 'Ho ho ho!';
 		}
@@ -148,37 +128,13 @@ extend
 
 Properties added with `extend` are non-enumerable.
 
-Methods which are overridden with `extend` can be accessed via the magic `base` method.
-
-	var Ox = Unit.beget({
-		plow: function() {
-			console.log('plow original');
-		}
-	});
-	Ox.extend({
-		plow: function() {
-			console.log('plow extension');
-			this.base();
-		}
-	});
-	Ox.plow(); // => 'plow extension'
-	           // => 'plow original'
-
-`extend` can be made into a general purpose function.
-
-	var extend = Function.prototype.call.bind(Unit.extend);
-	var x = { a: 9 };
-	extend(x, { b: 25 };
-	x.b - x.a; // => 16
-
-mixin
+`mixin`
 -----
 
-`mixin` is similar to `extend`, but properties added with `mixin` are added with the same property descriptors used in
-the object passed as the property map argument.
+`mixin` can be used to mix one object into another. It differs from `extend` in two ways: (1) properties remain enumerable if they are enumerable on the mixin, and (2) inherited properties are mixed in (up to a common parent).
 
-	var Santa = Unit.beget();
-	Santa.mixin({
+	var Santa = beget();
+	mixin(Santa, {
 		speak: function() {
 			return 'Ho ho ho!';
 		}
@@ -189,63 +145,53 @@ the object passed as the property map argument.
 	descriptor.writable;     // => true
 	descriptor.configurable; // => true
 
-	Santa.mixin(Object.freeze({
-		shout: function() {
-			return 'Merry Christmas!';
-		}
-	}));
-	descriptor = Object.getOwnPropertyDescriptor(Santa, 'shout');
-	descriptor.enumerable;   // => true
-	descriptor.writable;     // => false
-	descriptor.configurable; // => false
+    var Holidayer = beget(null, {
+        shout: function() {
+            return 'Merry Christmas!';
+        }
+    });
 
-Note that the above `Object.freeze` doesn't freeze `Santa`; it only freezes the object which is passed
-to `mixin`, meaning that when the properties are copied over to `Santa`, they are copied as
-non-writable and non-configurable.
+    var Elf = beget(Holidayer, {
+        makeToys: function() {
+            return 'Fa la la!';
+        }
+    });
 
-`mixin` can also be made into a general purpose function.
+	mixin(Santa, Elf);
+    Santa.shout();    // => 'Merry Christmas!'
+    Santa.makeToys(); // => 'Fa la la!'
 
-	var mixin = Function.prototype.call.bind(Unit.mixin);
-	var x = { a: 4 };
-	mixin(x, { b: 7 });
-	x.a + x.b; // => 11
+`inherits`
+----------
 
-Unlike `extend`, methods overridden with `mixin` CANNOT be accessed with the magic `base` method.
-In this case, if `base` is used, it will refer to whatever it would normally on the original object from which it was
-mixed in.
-
-isA
----
-
-Finally, `Unit` also provides the `isA` method for checking inheritance
+The `inherits` function can be used to check inheritance
 (`instanceof` will not work because there are no constructors).
 
-	PepperoniPizza.isA(Pizza);            // => true
-	MediumPepperoniPizza.isA(Pizza);      // => true
-	PepperoniPizza.isA(Unit);            // => true
-	PepperoniPizza.isA(Object.prototype); // => true
-	PepperoniPizza.isA(Santa);            // => false
-
-`isA` can also be made into a generic function in the same way as `beget` and `extend`.
+	inherits(PepperoniPizza, Pizza);            // => true
+	inherits(MediumPepperoniPizza, Pizza);      // => true
+	inherits(PepperoniPizza, Santa);            // => false
 
 clone
 -----
 
-The `clone` method makes a deep clone of the unit.
+The `clone` function makes a deep clone of an object.
 It creates a new object with the same prototype and then clones all **own** properties
 (with the same recursive algorithm) to the new object.
 
 copy
 ----
 
-The `copy` method makes a shallow copy of the unit.
+The `copy` function makes a shallow copy of an object.
 It creates a new object with the same prototype and then copies over **own** properties to the new object.
 Unlike `clone`, `copy` does not make a new object for each property; it simply copies the reference to the same object.
 
 Example
 -------
 
-	var Vehicle = Unit.beget({
+	var Vehicle = beget(null, {
+        construct: function(name) {
+            this.name = name;
+        },
 		speed: 0,
 		acceleration: 10,
 		start: function() {
@@ -263,24 +209,20 @@ Example
 	});
 
 	// MiniVan inherits all of Vehicle's properties
-	var MiniVan = Vehicle.beget({
+	var MiniVan = beget(Vehicle, {
 		acceleration: 6
 	});
 
-	// Racecar also inherits all of Vehicles properties, but it overrides the beget method.
-	var Racecar = Vehicle.beget({
-		spawn: function(name) {
-			// Use this.base to call Vehicle's spawn method (which is inherited from Unit).
-			var unit = this.base({ name: name });
-			unit.acceleration = Math.floor(Math.random() * 20 + 40);
-			return unit;
+	// Racecar also inherits all of Vehicle's properties, but it overrides `construct`.
+	var Racecar = beget(Vehicle, {
+		construct: function(name) {
+            Vehicle.construct.call(this, name);
+			this.acceleration = Math.floor(Math.random() * 20 + 40);
 		}
 	});
 
 	// peacockVan inherits from MiniVan
-	var peacockVan = MiniVan.beget({
-		name: 'peacock'
-	});
+	var peacockVan = spawn(MiniVan, 'peacock');
 
 	peacockVan.start();       // => peacock started 6
 	peacockVan.accelerate();  // => peacock 12
@@ -288,9 +230,9 @@ Example
 	peacockVan.stop();        // => peacock stopped 0
 
 	// wallaceCar inherits from Racecar
-	var wallaceCar = Racecar.spawn('wallace');
+	var wallaceCar = spawn(Racecar, 'wallace');
 	// andyCar also inherits from Racecar
-	var andyCar = Racecar.spawn('andy');
+	var andyCar = spawn(Racecar, 'andy');
 
 	wallaceCar.start();       // => wallace started [random number]
 	andyCar.start();          // => andy started [random number]

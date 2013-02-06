@@ -1,18 +1,8 @@
-var Unit = (function(Object, String, Error, TypeError) {
+var Spawn = (function(Object, String, Error, TypeError) {
 
 	'use strict';
 
-	var // The prototypical object from which all Units inherit.
-		// Basically, this object provides Units with Object.prototype properties, but it also
-		// allows all units' prototype to be modified directly with Unit.newProp = value;
-		// We use the syntax below (instead of simply Unit = { }) so that units have the name "Unit" when logged.
-		Unit = (function() {
-			var proto = (function Unit() { }).prototype;
-			delete proto.constructor;
-			return proto;
-		})(),
-
-		eval = eval,
+	var eval = eval,
 		create = Object.create,
 		keys = Object.keys,
 		getOwnPropertyNames = Object.getOwnPropertyNames,
@@ -37,7 +27,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 		call = lazyBind(Function.prototype.call),
 		apply = lazyBind(Function.prototype.apply),
 
-		isPrototype = lazyBind(Object.prototype.isPrototypeOf),
+		isPrototypeOf = lazyBind(Object.prototype.isPrototypeOf),
 		hasOwn = lazyBind(Object.prototype.hasOwnProperty),
 		getTagOf = lazyBind(Object.prototype.toString),
 
@@ -51,28 +41,25 @@ var Unit = (function(Object, String, Error, TypeError) {
 			return O;
 		},
 
-		// Can be used to set the value of an object when it is unknown whether a setter has been defined
-		// on that object for the property (or in its prototype chain).
-		set = function set(obj, name, value) {
-			defineProperty(obj, own({
-				value: value,
-				enumerable: false,
-				writable: false,
-				configurable: false
-			}));
-			return value;
-		},
-
-		beget = function beget(/* proto, ...props */) {
+		beget = function beget(/* proto, props */) {
 
 			var proto = arguments[0] != null ? Object(arguments[0]) : null,
-				allProps = create(null);
+				props = arguments[1] != null ? Object(arguments[1]) : null;
 
-			forEach(slice(arguments, 1), function(props) {
-				mixin(allProps, propsToDescriptors(props, proto));
-			});
+			return create(proto, props != null ? propsToDescriptors(own(props), proto) : null);
 
-			return create(proto, allProps);
+		},
+
+		spawn = function spawn(obj/*, ...args */) {
+			// spawn is beget + construct.
+
+			var O = create(obj),
+				construct = O.construct;
+
+			if (typeof construct == 'function')
+				apply(construct, O, slice(arguments, 1));
+
+			return O;
 
 		},
 
@@ -141,7 +128,6 @@ var Unit = (function(Object, String, Error, TypeError) {
 
 		})(),
 
-
 		invert = function invert(f/*, length*/) {
 			var length = arguments[1];
 			return createWrapper(f, length, function wrapper() {
@@ -156,87 +142,22 @@ var Unit = (function(Object, String, Error, TypeError) {
 			});
 		},
 
-		inherits = invert(isPrototype, 2),
-
-		reBase = /\.\s*base\b/,
+		inherits = invert(isPrototypeOf, 2),
 
 		propsToDescriptors = function propsToDescriptors(props, base) {
 
-			var desc = create(null),
-
-				baseIsObject = Object(base) === base;
+			var desc = create(null);
 
 			forEach(getUncommonPropertyNames(props, base), function(name) {
-
 				var d = own(getOwnPropertyDescriptor(props, name));
-				d.enumerable = false;
-
-				if (// Only Units are magicWrapped to allow a special base method.
-					baseIsObject && Unit && inherits(base, Unit)
-					&& typeof d.value == 'function'
-					&& typeof base[name] == 'function'
-					&& test(reBase, String(d.value))
-				) d.value = magicWrap(d.value, base, name);
-
+				if (inherits(d.value, Descriptor))
+					d = d.value;
+				else
+					d.enumerable = false;
 				desc[name] = d;
-
 			});
 
 			return desc;
-
-		},
-
-		magicWrap = (function() {
-
-			var NONEXISTANT = { };
-
-			return function magicWrap(f, base, method) {
-				// Wrap a function with one which provides base[method] through this.base when called.
-
-				return createWrapper(f, function magicWrapped() {
-
-					var O = Object(this),
-						oldBase = NONEXISTANT,
-						changed = false,
-						ret;
-
-					if (!hasOwn(O, 'base') || getOwnPropertyDescriptor(O, 'base').writable) {
-						if (hasOwn(O, 'base')) {
-							oldBase = O.base;
-						}
-						// Use set instead of O.base in case an object in O's prototype chain has a setter named base defined.
-						set(O, 'base', base[method]);
-						changed = true
-					}
-
-					// this is intended instead of O below, to allow calling in non-object context, such as null.
-					ret = apply(f, this, arguments);
-
-					if (changed) {
-						if (oldBase === NONEXISTANT) delete O.base;
-						else O.base = oldBase;
-					}
-
-					return ret;
-
-				});
-			};
-
-		})(),
-
-		contextualize = function contextualize(f/*, arg1, arg2, ... */) {
-			// The opposite of lazyBind, this function returns a wrapper which calls f, passing the wrapper's context as
-			// the first argument to f.
-
-			if (typeof f != 'function')
-				throw new TypeError('Function expected: ' + f);
-
-			var doF = lazyTie(f),
-				args = slice(arguments, 1);
-
-			return createWrapper(f, f.length - 1, function contextualizedMethod() {
-				return doF(null, [ this ].concat(args, slice(arguments)));
-			});
 
 		},
 
@@ -265,7 +186,27 @@ var Unit = (function(Object, String, Error, TypeError) {
 				|| getPropertyDescriptor(getPrototypeOf(obj), name);
 		},
 
-		mixin = function mixin(mixinWhat/*, mixinWith1, mixinWith2, ... */) {
+		Descriptor = create(null),
+
+		sealed = function sealed(value) {
+			return beget(Descriptor, {
+				value: value,
+				enumerable: false,
+				writable: true,
+				configurable: false
+			});
+		},
+
+		frozen = function frozen(value) {
+			return beget(Descriptor, {
+				value: value,
+				enumerable: false,
+				writable: false,
+				configurable: false
+			});
+		},
+
+		mixin = function mixin(mixinWhat/*, ...mixinWith */) {
 
 			var mixinWith;
 
@@ -299,7 +240,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 
 		},
 
-		extend = function extend(extendWhat/*, extendWith1, extendWith2 */) {
+		extend = function extend(extendWhat/*, ...extendWith */) {
 
 			var extendWith, descriptors;
 
@@ -313,7 +254,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 
 				extendWith = Object(arguments[i]);
 
-				descriptors = propsToDescriptors(extendWith, extendWhat);
+				descriptors = propsToDescriptors(own(extendWith), extendWhat);
 
 				// We define these one at a time in case a property on extendWhat is non-configurable.
 				forEach(keys(descriptors), (function(name) {
@@ -334,7 +275,7 @@ var Unit = (function(Object, String, Error, TypeError) {
 
 		},
 
-		copy = function copy(copyWhat/*, mixin1, mixin2, ... */) {
+		copy = function copy(copyWhat/*, ...mixinWith */) {
 			// Performs a simple shallow copy intended specifically for objects.
 			// For a generic deep clone, use clone.
 
@@ -466,58 +407,35 @@ var Unit = (function(Object, String, Error, TypeError) {
 
 			return clone;
 
-		})();
+		})(),
 
-	if (typeof SpawnExports == 'object') {
-		// TODO: Remove this?
-		extend(SpawnExports, {
-			beget: beget,
-			lazyBind: lazyBind,
-			lazyTie: lazyTie,
-			slice: slice,
-			isPrototype: isPrototype,
-			hasOwn: hasOwn,
-			getTagOf: getTagOf,
-			createWrapper: createWrapper,
-			invert: invert,
-			inherits: inherits,
-			propsToDescriptors: propsToDescriptors,
-			magicWrap: magicWrap,
-			contextualize: contextualize,
-			getUncommonPropertyNames: getUncommonPropertyNames,
-			getPropertyDescriptor: getPropertyDescriptor,
-			extend: extend,
-			mixin: mixin,
-			copy: copy,
-			clone: clone
-		});
-	}
+		cast = function cast(obj, value) {
+			if (inherits(value, this))
+				return value;
+			else
+				return spawn(obj, value);
+		};
 
-	return extend(Unit, {
+	return beget(null, {
 
-		beget: contextualize(beget),
-		spawn: function spawn() {
-			// spawn is identical to beget, but doesn't take the properties argument.
-			// This allows for overriding spawn to accept instantiation arguments.
-			return beget(this);
-		},
-		copy: contextualize(copy),
-		clone: contextualize(clone),
-		cast: function cast(value) {
-			if (!inherits(this, Unit)) throw new TypeError('cast can only be called on a Unit.');
-			if (inherits(value, this)) return value;
-			if (typeof this.spawn == 'function') return this.spawn(value);
-			else return beget(this);
-		},
+		beget: beget,
+		spawn: spawn,
 
-		inherits: contextualize(inherits),
-		extend: contextualize(extend),
-		mixin: contextualize(mixin),
+		frozen: frozen,
+		sealed: sealed,
 
-		base: function base() {
-			throw new Error('base method called outside of magic method.');
-		}
+		inherits: inherits,
+		extend: extend,
+		mixin: mixin,
+
+		copy: copy,
+		clone: clone,
+		cast: cast
 
 	});
 
 })(Object, String, Error, TypeError);
+
+// Export if `exports` is present.
+if (typeof exports != 'undefined' && Object(exports) === exports)
+	Spawn.mixin(exports, Spawn);
