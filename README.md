@@ -171,20 +171,6 @@ The `inherits` function can be used to check inheritance
 	inherits(MediumPepperoniPizza, Pizza);      // => true
 	inherits(PepperoniPizza, Santa);            // => false
 
-clone
------
-
-The `clone` function makes a deep clone of an object.
-It creates a new object with the same prototype and then clones all **own** properties
-(with the same recursive algorithm) to the new object.
-
-copy
-----
-
-The `copy` function makes a shallow copy of an object.
-It creates a new object with the same prototype and then copies over **own** properties to the new object.
-Unlike `clone`, `copy` does not make a new object for each property; it simply copies the reference to the same object.
-
 Example
 -------
 

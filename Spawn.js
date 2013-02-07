@@ -12,11 +12,9 @@ var Spawn = (function(Object, String, Error, TypeError) {
 		isExtensible = Object.isExtensible,
 
 		lazyBind = Function.prototype.bind.bind(Function.prototype.call),
-		lazyTie = Function.prototype.bind.bind(Function.prototype.apply),
 
 		slice = lazyBind(Array.prototype.slice),
 		push = lazyBind(Array.prototype.push),
-		pushAll = lazyTie(Array.prototype.push),
 		forEach = lazyBind(Array.prototype.forEach),
 		some = lazyBind(Array.prototype.some),
 		reverse = lazyBind(Array.prototype.reverse),
@@ -273,147 +271,6 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 			return extendWhat;
 
-		},
-
-		copy = function copy(copyWhat/*, ...mixinWith */) {
-			// Performs a simple shallow copy intended specifically for objects.
-			// For a generic deep clone, use clone.
-
-			if (Object(copyWhat) != copyWhat)
-				throw new TypeError('Cannot copy a non-object:' + copyWhat);
-
-			// This algorithm simply creates a new object with the same prototype and then mixes in the own properties.
-			// It will also mixin any uncommon properties from other arguments.
-			var args = [ create(getPrototypeOf(copyWhat)) ];
-			pushAll(args, arguments);
-			return apply(mixin, null, args);
-
-		},
-
-		clone = (function() {
-			// Performs a deep clone. For a shallow copy, use either the copy method or Object.create.
-			// In order to permit objects do define a self cloning method which is utilized by this clone function,
-			// there are two steps that must be taken: (1) Define clone.$selfClone with a property name or Symbol
-			// (if Symbols are available) which can be used to retrieve the clone method. (2) Define the self cloning
-			// method on each object which can self clone using the same property name or symbol.
-
-			var $selfClone,
-
-				clone = function clone(input) {
-					$selfClone = clone.$selfClone;
-					return structuredClone(input, [ ]);
-				},
-
-				structuredClone = function structuredClone(input, memory) {
-					// This algorithm is loosely based on the HTML5 internal structured cloning algorithm, but there are
-					// some slight deviations.
-					// http://www.w3.org/TR/html5/common-dom-interfaces.html#safe-passing-of-structured-data
-					// TODO: It may be worthwhile to reevaluate whether there should be deviations in the algorithm or not.
-
-					var pair, output, selfClone;
-
-					if (
-						some(memory, function(u) {
-							var pair = u;
-							return input === pair.source;
-						})
-					) return pair.destination;
-
-					if (typeof input != 'object' || input === null)
-						return input;
-
-					switch(getTagOf(input)) {
-
-						case 'Boolean':		output = new Boolean(Value(input)); break;
-						case 'Number':		output = new Number(+input); break;
-						case 'String':		output = new String(String(input)); break;
-						case 'Date':		output = new Date(+input); break;
-						case 'RegExp':		output = new RegExp(String(input)); break;
-						// case File: break;
-						// case Blob: break;
-						// case FileList: break;
-						case 'Array':	 	output = new Array(input.length); break;
-						//case TypedArray: break;
-
-						case 'Function':
-							throw new DataCloneError('Functions cannot be cloned.');
-
-						case 'Object':
-						case 'Error':
-						case 'Math':
-						default:
-							// This currently deviates from the internal structured cloning algorithm specification.
-							// To follow the standard, it should just be: output = new Object(); break;
-
-							// An object can define its own clone method.
-							if($selfClone && (selfClone = input[$selfClone]) && typeof selfClone == 'function') {
-								output = call(selfClone, input);
-								// If the object cloned itself, it should take care of copying over the correct own
-								// properties as well. We leave that up to the object to do internally.
-								return output;
-							}
-
-							// If input has a cloneNode method, use it.
-							// Unfortunately, this assumes anything with a "cloneNode" method (and other duck-type
-							// constraints, such as the "nodeType" property) wants to be cloned using that method,
-							// which may not be the case. For better integrity, the [[Class]] of input could be
-							// checked against known HTML/XML DOM Nodes. However, the list of possible [[Class]]
-							// values would be rather large and may not be able to be exhaustive. I'm unsure if
-							// there is a better approach. Checking instanceof Node is no good because we have to
-							// support nodes from other frames.
-							else if('nodeType' in input
-									&& 'ownerDocument' in input
-									&& typeof input.cloneNode == 'function'
-								) output = input.cloneNode(true);
-
-							// Create an object with the same prototype as input.
-							else output = create(getPrototypeOf(input));
-
-							break;
-
-					}
-
-					push(memory, {
-						source: input,
-						destination: output
-					});
-
-					forEach(getOwnPropertyNames(input), function(key) {
-
-						var inputDesc = own(getOwnPropertyDescriptor(input, key)),
-							clonedPropertyValue;
-
-						if (inputDesc.value) {
-							// Clone the property value for a deep clone.
-							clonedPropertyValue = structuredClone(inputDesc.value, memory);
-							defineProperty(output, key, {
-								value: clonedPropertyValue,
-								enumerable: inputDesc.enumerable,
-								writable: inputDesc.writable,
-								configurable: inputDesc.configurable
-							});
-						} else {
-							// For getters and setters we just copy over the descriptor. We expect getters and setters
-							// to be smart enough to work with their given context to produce reasonable values in the
-							// event that they are copied to other objects.
-							defineProperty(output, key, inputDesc);
-						}
-
-					});
-
-					return output;
-
-				};
-
-			return clone;
-
-		})(),
-
-		cast = function cast(obj, value) {
-			if (inherits(value, this))
-				return value;
-			else
-				return spawn(obj, value);
 		};
 
 	return beget(null, {
@@ -426,11 +283,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 		inherits: inherits,
 		extend: extend,
-		mixin: mixin,
-
-		copy: copy,
-		clone: clone,
-		cast: cast
+		mixin: mixin
 
 	});
 
