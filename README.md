@@ -64,8 +64,6 @@ Properties inherit a false writable or configurable state.
 `beget` is like `Object.create`, except it has an easier, cleaner
 syntax with (we feel) reasonable defaults for the property descriptors.
 
-	var beget = Function.prototype.call.bind(Unit.beget);
-
 	var John = beget(Mike, {
 		firstName: 'John'
 	});
@@ -170,6 +168,49 @@ The `inherits` function can be used to check inheritance
 	inherits(PepperoniPizza, Pizza);            // => true
 	inherits(MediumPepperoniPizza, Pizza);      // => true
 	inherits(PepperoniPizza, Santa);            // => false
+
+Private Properties
+------------------
+
+[Secrets](http://github.com/joijs/tempo/Secrets) or [WeakMaps](http://github.com/joijs/tempo/Harmonize) can be used alongside Spawn to associate private state with objects.
+
+    var Purse = (function() {
+
+        var $ = createSecret();
+
+        return beget(null, {
+
+            construct: function(balance) {
+                if (Object(this) !== this)
+                    throw new TypeError('Construct must be called on an object.');
+                $(this).balance = balance | 0;
+            },
+
+            deposit: function deposit(from, amount) {
+                if (!('balance' in $(this)))
+                    throw new TypeError('Deposit must be called on a Purse.');
+                if (!('balance' in $(from))
+                    throw new TypeError('Another Purse is required to make a deposit.');
+                $(from).balance -= amount;
+                $(this).balance += amount;
+            },
+
+            get balance() {
+                return $(this).balance;
+            }
+
+        });
+
+    })();
+
+    var sally = spawn(Purse, 100),
+        jane = spawn(Purse, 250);
+
+    sally.deposit(jane, 50);
+    console.log(
+        sally.balance, // => 150
+        jane.balance   // => 200
+    );
 
 Example
 -------
