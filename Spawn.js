@@ -2,7 +2,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 	'use strict';
 
-	var eval = eval,
+	var _eval = eval, // `eval` is reserved in strict mode.
 		create = Object.create,
 		keys = Object.keys,
 		getOwnPropertyNames = Object.getOwnPropertyNames,
@@ -19,8 +19,8 @@ var Spawn = (function(Object, String, Error, TypeError) {
 		some = lazyBind(Array.prototype.some),
 		reverse = lazyBind(Array.prototype.reverse),
 		contact = lazyBind(Array.prototype.concat),
-
-		join = lazyBind(String.prototype.join),
+		join = lazyBind(Array.prototype.join),
+		filter = lazyBind(Array.prototype.filter),
 
 		call = lazyBind(Function.prototype.call),
 		apply = lazyBind(Function.prototype.apply),
@@ -28,6 +28,8 @@ var Spawn = (function(Object, String, Error, TypeError) {
 		isPrototypeOf = lazyBind(Object.prototype.isPrototypeOf),
 		hasOwn = lazyBind(Object.prototype.hasOwnProperty),
 		getTagOf = lazyBind(Object.prototype.toString),
+
+		replace = lazyBind(String.prototype.replace),
 
 		// Returns a clone of an object's own properties without a [[Prototype]].
 		own = function own(obj) {
@@ -44,7 +46,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 			var proto = arguments[0] != null ? Object(arguments[0]) : null,
 				props = arguments[1] != null ? Object(arguments[1]) : null;
 
-			return create(proto, props != null ? propsToDescriptors(own(props), proto) : null);
+			return create(proto, props != null ? propsToDescriptors(own(props), proto) : undefined);
 
 		},
 
@@ -85,7 +87,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 					throw new TypeError('Function expected: ' + original);
 
 				var length = typeof arguments[2] != 'undefined' ? arguments[1] : original.length,
-					f = typeof arguments[2] != 'undefined' ? arguments[2] : arguments[1],
+					f = typeof arguments[2] != 'undefined' ? arguments[2] : arguments[1];
 
 				if (length < 0) length = 0;
 				length = length >>> 0;
@@ -103,13 +105,16 @@ var Spawn = (function(Object, String, Error, TypeError) {
 					for (var i = 0; i < length; i++)
 						push(args, '$' + i);
 
-					generator = eval(
-						'(function(f, original) {'
-							+ 'var wrapper = function ' + original.name + '(' + join(args, ',') + ') {'
-								+ 'return apply(f, this, arguments);'
-							+ '};'
+					generator = _eval(
+						'(function(wrapF, original, name, apply, _eval) {'
+							+ '"use strict";'
+							+ 'var wrapper = _eval("(function(wrapF, original, name, apply) {'
+								+ 'return (function " + name + "_(' + join(args, ',') + ') {'
+									+ 'return apply(wrapF, this, arguments);'
+								+ '});'
+							+ '})");'
 							+ 'wrapper.original = original;'
-							+ 'return wrapper;'
+							+ 'return wrapper(wrapF, original, name, apply);'
 						+ '})'
 					);
 
@@ -120,7 +125,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 				}
 
-				return generator(f, original);
+				return generator(f, original, replace(original.name, /\W/g, '_'), apply, _eval);
 
 			};
 
@@ -162,12 +167,14 @@ var Spawn = (function(Object, String, Error, TypeError) {
 		getUncommonPropertyNames = (function() {
 			return function getUncommonPropertyNames(from, compareWith) {
 				var namesMap = create(null);
-				return concatUncommonNames(from, compareWith)
-					.filter(function(u) {
+				return filter(
+					concatUncommonNames(from, compareWith),
+					function(u) {
 						if (namesMap[u]) return false;
 						namesMap[u] = true;
 						return true;
-					});
+					}
+				);
 			};
 			function concatUncommonNames(from, compareWith) {
 				if (Object(from) != from
@@ -218,7 +225,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 				mixinWith = Object(arguments[i]);
 
-				forEach(getUncommonPropertyNames(mixinWith, mixinWhat), (function(name) {
+				forEach(getUncommonPropertyNames(mixinWith, mixinWhat), function(name) {
 
 					var whatDesc = own(getPropertyDescriptor(mixinWhat, name)),
 						withDesc = own(getPropertyDescriptor(mixinWith, name));
@@ -255,7 +262,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 				descriptors = propsToDescriptors(own(extendWith), extendWhat);
 
 				// We define these one at a time in case a property on extendWhat is non-configurable.
-				forEach(keys(descriptors), (function(name) {
+				forEach(keys(descriptors), function(name) {
 
 					var whatDesc = own(getOwnPropertyDescriptor(extendWhat, name)),
 						withDesc = descriptors[name];
@@ -289,6 +296,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 })(Object, String, Error, TypeError);
 
-// Export if `exports` is present.
-if (typeof exports != 'undefined' && Object(exports) === exports)
-	Spawn.mixin(exports, Spawn);
+// exports
+if (typeof module == 'object' && module != null
+	&& typeof module.exports == 'object' && module.exports != null)
+	module.exports = Spawn;
