@@ -21,7 +21,7 @@ To create an object which inherits from another object, use `beget` again.
 	var CheesePizza = beget(Pizza);
 	// CheesePizza inherits from Pizza
 
-The `beget` method accepts one optional argument, a map of properties to add to the new object.
+The `beget` function accepts one optional argument, a map of properties to add to the new object.
 
 	var PepperoniPizza = beget(Pizza, {
 		toppings: [ 'pepperoni' ]
