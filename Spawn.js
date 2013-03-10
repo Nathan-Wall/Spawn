@@ -2,8 +2,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 	'use strict';
 
-	var _eval = eval, // `eval` is reserved in strict mode.
-		create = Object.create,
+	var create = Object.create,
 		keys = Object.keys,
 		getOwnPropertyNames = Object.getOwnPropertyNames,
 		getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor,
@@ -31,8 +30,15 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 		replace = lazyBind(String.prototype.replace),
 
+	 	// `eval` is reserved in strict mode.
+	 	// Also, we want to use indirect eval so that implementations can take advantage
+	 	// of memory & performance enhancements which are possible without direct eval.
+		_eval = eval,
+
 		// Returns a clone of an object's own properties without a [[Prototype]].
 		own = function own(obj) {
+			if (obj == null || getPrototypeOf(obj) == null)
+				return obj;
 			var O = create(null);
 			forEach(getOwnPropertyNames(obj), function(key) {
 				defineProperty(O, key,
@@ -56,6 +62,7 @@ var Spawn = (function(Object, String, Error, TypeError) {
 			var O = create(obj),
 				construct = O.construct;
 
+			// TODO: Only pass own() versions of the objects to the constructor?
 			if (typeof construct == 'function')
 				apply(construct, O, slice(arguments, 1));
 
@@ -112,9 +119,9 @@ var Spawn = (function(Object, String, Error, TypeError) {
 								+ 'return (function " + name + "_(' + join(args, ',') + ') {'
 									+ 'return apply(wrapF, this, arguments);'
 								+ '});'
-							+ '})");'
+							+ '})")(wrapF, original, name, apply);'
 							+ 'wrapper.original = original;'
-							+ 'return wrapper(wrapF, original, name, apply);'
+							+ 'return wrapper;'
 						+ '})'
 					);
 
