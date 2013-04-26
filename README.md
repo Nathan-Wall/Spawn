@@ -163,7 +163,7 @@ Properties added with `extend` are non-enumerable.
 ----------
 
 The `inherits` function can be used to check inheritance
-(`instanceof` will not work because there are no constructors).
+(`instanceof` will not work because you're not checking against a constructor).
 
 	inherits(PepperoniPizza, Pizza);            // => true
 	inherits(MediumPepperoniPizza, Pizza);      // => true
