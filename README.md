@@ -62,7 +62,7 @@ Properties inherit a false writable or configurable state.
     delete FrozenPizza.thaw; // Error: `thaw` is non-configurable
 
 `beget` is like `Object.create`, except it has an easier, cleaner
-syntax with (we feel) reasonable defaults for the property descriptors.
+syntax with reasonable defaults for the property descriptors.
 
 	var John = beget(Mike, {
 		firstName: 'John'
