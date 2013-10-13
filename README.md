@@ -1,13 +1,53 @@
-Spawn
-=====
+# Spawn
 
-A small, experimental library which attempts to push prototypal inheritance to its natural conclusions in JavaScript
+A small library which attempts to push prototypal inheritance to its natural conclusions in JavaScript
 (for ECMAScript 5).
 
 This library provides a few basic functions which are oriented toward making prototypal inheritence simple and straight-forward.
 
-Inheritance (`beget`)
----------------------
+## Getting Started
+
+### Node
+
+#### Installation
+
+    npm install Spawn
+
+Then...
+
+    var Spawn = require('Spawn'),
+    	beget = Spawn.beget,
+    	spawn = Spawn.spawn;
+
+    // ...
+
+### Browser
+
+#### Basic
+
+Download `Spawn.js` and serve it in a `<script>` tag.
+
+    <script type="text/javascript" src="path/to/Spawn.js"></script>
+    <script type="text/javascript">
+        var beget = Spawn.beget,
+        	spawn = Spawn.spawn;
+    </script>
+
+Inside another script, you can use `secrets.create()` to create a secret coupler (see below).
+
+#### AMD
+
+It's also possible to import Spawn as an AMD module.
+
+    require([ 'Spawn' ], function(Spawn) {
+        var beget = Spawn.beget,
+        	spawn = Spawn.spawn;
+        // ...
+    });
+
+## Use
+
+### Inheritance (`beget`)
 
 To create an object use `beget`.
 
@@ -75,8 +115,7 @@ Like `Object.create`, `beget` can be used on `null` to create an object with no 
 	'hasOwnProperty' in x; // => false
 	// x does not inherit from Object (or anything)
 
-`sealed` and `frozen`
----------------------
+### `sealed` and `frozen`
 
 A property can be set to be non-configurable or non-writable using `sealed` and `frozen`. The former makes a property non-configurable, while the latter makes a property both non-configurable and non-writable.
 
@@ -94,8 +133,7 @@ A property can be set to be non-configurable or non-writable using `sealed` and 
     Fox.trait = 'lazy'; // Error
     Object.defineProperty(Fox, 'trait', { enumerable: true }); // Error
 
-`spawn`
------
+### `spawn`
 
 `spawn` is `beget + construct`. It calls `beget` on the first argument and passes any other arguments to an object's `construct` method (if present).
 
@@ -111,8 +149,7 @@ A property can be set to be non-configurable or non-writable using `sealed` and 
 	var Mike = spawn(Person, 'Mike', 'Campbell');
 	Mike.getName(); // => 'Mike Campbell'
 
-`extend`
-------
+### `extend`
 
 `extend` can be used to extend the properties of an object.
 
@@ -126,8 +163,7 @@ A property can be set to be non-configurable or non-writable using `sealed` and 
 
 Properties added with `extend` are non-enumerable.
 
-`mixin`
------
+### `mixin`
 
 `mixin` can be used to mix one object into another. It differs from `extend` in two ways: (1) properties remain enumerable if they are enumerable on the mixin, and (2) inherited properties are mixed in (up to a common parent).
 
@@ -159,8 +195,7 @@ Properties added with `extend` are non-enumerable.
     Santa.shout();    // => 'Merry Christmas!'
     Santa.makeToys(); // => 'Fa la la!'
 
-`inherits`
-----------
+### `inherits`
 
 The `inherits` function can be used to check inheritance
 (`instanceof` will not work because you're not checking against a constructor).
@@ -169,8 +204,7 @@ The `inherits` function can be used to check inheritance
 	inherits(MediumPepperoniPizza, Pizza);      // => true
 	inherits(PepperoniPizza, Santa);            // => false
 
-Private Properties
-------------------
+### Private Properties
 
 [Secrets](http://github.com/joijs/tempo/Secrets) or [WeakMaps](http://github.com/joijs/tempo/Harmonize) can be used alongside Spawn to associate private state with objects.
 
@@ -212,8 +246,7 @@ Private Properties
         jane.balance   // => 200
     );
 
-Example
--------
+### Example
 
 	var Vehicle = beget(null, {
         construct: function(name) {

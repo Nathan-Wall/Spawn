@@ -1,4 +1,6 @@
-var Spawn = (function(Object, String, Error, TypeError) {
+// TODO: Rename `beget` to `like` and `spawn` to `beget`?
+
+(function(global, Object, String, Error, TypeError) {
 
 	'use strict';
 
@@ -101,8 +103,10 @@ var Spawn = (function(Object, String, Error, TypeError) {
 				if (length > MAX_WRAPPER_LENGTH)
 					throw new Error('Maximum length allowed is ' + MAX_WRAPPER_LENGTH + ': ' + length);
 
-				var args = [ ],
+				var args = create(null),
 					generator = generators[length];
+
+				args.length = 0;
 
 				if (typeof f != 'function')
 					throw new TypeError('Function expected: ' + f);
@@ -148,6 +152,8 @@ var Spawn = (function(Object, String, Error, TypeError) {
 				} else {
 					args = slice(arguments);
 				}
+				// TODO: Array.prototype.reverse seems to use Put(), which may cause problems(?) if Array.prototype[index] is changed
+				// to a setter. Look into this and workarounds (possibly mention to ES-Discuss).
 				return apply(f, null, reverse(args));
 			});
 		},
@@ -285,25 +291,32 @@ var Spawn = (function(Object, String, Error, TypeError) {
 
 			return extendWhat;
 
-		};
+		},
 
-	return beget(null, {
+		Spawn = beget(null, {
 
-		beget: beget,
-		spawn: spawn,
+			beget: beget,
+			spawn: spawn,
 
-		frozen: frozen,
-		sealed: sealed,
+			frozen: frozen,
+			sealed: sealed,
 
-		inherits: inherits,
-		extend: extend,
-		mixin: mixin
+			inherits: inherits,
+			extend: extend,
+			mixin: mixin
 
-	});
+		});
 
-})(Object, String, Error, TypeError);
+	// Export for Node.
+	if (typeof module == 'object' && typeof module.exports == 'object')
+		module.exports = Spawn;
 
-// exports
-if (typeof module == 'object' && module != null
-	&& typeof module.exports == 'object' && module.exports != null)
-	module.exports = Spawn;
+	// Export for AMD
+	else if (typeof global.define == 'function' && global.define.amd)
+		global.define(function() { return Spawn; });
+
+	// Export as a global
+	else
+		global.Spawn = Spawn;
+
+})(typeof global != 'undefined' && Object(global) === global ? global : typeof window != 'undefined' ? window : this, Object, String, Error, TypeError);
