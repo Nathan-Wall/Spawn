@@ -7,20 +7,6 @@ This library provides a few basic functions which are oriented toward making pro
 
 ## Getting Started
 
-### Node
-
-#### Installation
-
-    npm install Spawn
-
-Then...
-
-    var Spawn = require('Spawn'),
-    	beget = Spawn.beget,
-    	spawn = Spawn.spawn;
-
-    // ...
-
 ### Browser
 
 #### Basic
