@@ -70,93 +70,9 @@
 
 		},
 
-		// Creates a wrapper function with the same length as the original.
-		createWrapper = (function() {
-
-			// Let's memoize wrapper generators to avoid using eval too often.
-			var generators = { },
-
-				numGenerators = 0,
-
-				// Let's limit length to 512 for now. If someone wants to up it, they can.
-				MAX_WRAPPER_LENGTH = 512,
-
-				// Limit the number of generators which are cached to preserve memory in the unusual case that
-				// someone creates many generators. We don't go to lengths to make the cache drop old, unused
-				// values as there really shouldn't be a need for so many generators in the first place.
-				MAX_CACHED_GENERATORS = 64;
-
-			return function createWrapper(/* original, length, f */$0, $1) {
-
-				var original = arguments[0];
-
-				if (typeof original != 'function')
-					throw new TypeError('Function expected: ' + original);
-
-				var length = typeof arguments[2] != 'undefined' ? arguments[1] : original.length,
-					f = typeof arguments[2] != 'undefined' ? arguments[2] : arguments[1];
-
-				if (length < 0) length = 0;
-				length = length >>> 0;
-				if (length > MAX_WRAPPER_LENGTH)
-					throw new Error('Maximum length allowed is ' + MAX_WRAPPER_LENGTH + ': ' + length);
-
-				var args = create(null),
-					generator = generators[length];
-
-				args.length = 0;
-
-				if (typeof f != 'function')
-					throw new TypeError('Function expected: ' + f);
-
-				if (!generator) {
-
-					for (var i = 0; i < length; i++)
-						push(args, '$' + i);
-
-					generator = _eval(
-						'(function(wrapF, original, name, apply, _eval) {'
-							+ '"use strict";'
-							+ 'var wrapper = _eval("(function(wrapF, original, name, apply) {'
-								+ 'return (function " + name + "_(' + join(args, ',') + ') {'
-									+ 'return apply(wrapF, this, arguments);'
-								+ '});'
-							+ '})")(wrapF, original, name, apply);'
-							+ 'wrapper.original = original;'
-							+ 'return wrapper;'
-						+ '})'
-					);
-
-					if (numGenerators < MAX_CACHED_GENERATORS) {
-						generators[length] = generator;
-						numGenerators++;
-					}
-
-				}
-
-				return generator(f, original, replace(original.name, /\W/g, '_'), apply, _eval);
-
-			};
-
-		})(),
-
-		invert = function invert(f/*, length*/) {
-			var length = arguments[1];
-			return createWrapper(f, length, function wrapper() {
-				var args;
-				if (length !== undefined) {
-					args = slice(arguments, 0, length);
-					args.length = length;
-				} else {
-					args = slice(arguments);
-				}
-				// TODO: Array.prototype.reverse seems to use Put(), which may cause problems(?) if Array.prototype[index] is changed
-				// to a setter. Look into this and workarounds (possibly mention to ES-Discuss).
-				return apply(f, null, reverse(args));
-			});
+		isLike = function isLike(obj, proto) {
+			return isPrototypeOf(proto, obj);
 		},
-
-		inherits = invert(isPrototypeOf, 2),
 
 		propsToDescriptors = function propsToDescriptors(props, base) {
 
@@ -164,7 +80,7 @@
 
 			forEach(getUncommonPropertyNames(props, base), function(name) {
 				var d = own(getOwnPropertyDescriptor(props, name));
-				if (inherits(d.value, Descriptor))
+				if (isLike(d.value, Descriptor))
 					d = d.value;
 				else
 					d.enumerable = false;
@@ -190,7 +106,7 @@
 			function concatUncommonNames(from, compareWith) {
 				if (Object(from) != from
 					|| from === compareWith
-					|| inherits(compareWith, from)) return [ ];
+					|| isLike(compareWith, from)) return [ ];
 				return contact(getOwnPropertyNames(from),
 					concatUncommonNames(getPrototypeOf(from), compareWith));
 			}
@@ -299,7 +215,7 @@
 			frozen: frozen,
 			sealed: sealed,
 
-			inherits: inherits,
+			isLike: isLike,
 			extend: extend,
 			mixin: mixin
 

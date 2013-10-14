@@ -5,6 +5,10 @@ A small library which attempts to push prototypal inheritance to its natural con
 
 This library provides a few basic functions which are oriented toward making prototypal inheritence simple and straight-forward.
 
+## Motivation
+
+Simile is *prototypal* at its core.  The motivation behind simile is to provide a set of tools that grounds code in a prototypal pattern of thought.  Objects are stated to be `like` other objects, building correlations between objects, and diminishing the role of constructors.
+
 ## Getting Started
 
 ### Node
@@ -195,14 +199,17 @@ Properties added with `extend` are non-enumerable.
     Santa.shout();    // => 'Merry Christmas!'
     Santa.makeToys(); // => 'Fa la la!'
 
-### `inherits`
+### `isLike`
 
-The `inherits` function can be used to check inheritance
+The `isLike` function can be used to check inheritance
 (`instanceof` will not work because you're not checking against a constructor).
 
-	inherits(PepperoniPizza, Pizza);            // => true
-	inherits(MediumPepperoniPizza, Pizza);      // => true
-	inherits(PepperoniPizza, Santa);            // => false
+	isLike(PepperoniPizza, Pizza);            // => true
+	isLike(MediumPepperoniPizza, Pizza);      // => true
+	isLike(PepperoniPizza, Santa);            // => false
+	isLike(Pizza, PepperoniPizza);            // => false
+
+Note the last example above in particular.  Although `PepperoniPizza` is like `Pizza`, `Pizza` is not like `PepperoniPizza`.  This is because `PepperoniPizza` inherits `Pizza`'s properties, but `Pizza` doesn't  inherit `PepperoniPizza`'s properties.
 
 ### Private Properties
 
