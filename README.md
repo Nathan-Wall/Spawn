@@ -1,4 +1,4 @@
-# Spawn
+# Simile
 
 A small library which attempts to push prototypal inheritance to its natural conclusions in JavaScript
 (for ECMAScript 5).
@@ -11,50 +11,50 @@ This library provides a few basic functions which are oriented toward making pro
 
 #### Basic
 
-Download `Spawn.js` and serve it in a `<script>` tag.
+Download `simile.js` and serve it in a `<script>` tag.
 
-    <script type="text/javascript" src="path/to/Spawn.js"></script>
+    <script type="text/javascript" src="path/to/simile.js"></script>
     <script type="text/javascript">
-        var beget = Spawn.beget,
-        	spawn = Spawn.spawn;
+        var like = simile.like,
+        	beget = simile.beget;
     </script>
 
 Inside another script, you can use `secrets.create()` to create a secret coupler (see below).
 
 #### AMD
 
-It's also possible to import Spawn as an AMD module.
+It's also possible to import simile as an AMD module.
 
-    require([ 'Spawn' ], function(Spawn) {
-        var beget = Spawn.beget,
-        	spawn = Spawn.spawn;
+    require([ 'path/to/simile' ], function(simile) {
+        var like = simile.like,
+        	beget = simile.beget;
         // ...
     });
 
 ## Use
 
-### Inheritance (`beget`)
+### Inheritance (`like`)
 
-To create an object use `beget`.
+To create an object use `like`.
 
-	var Pizza = beget();
+	var Pizza = like();
 	// Pizza is an object which has no prototype.
 
     Object.getPrototypeOf(Pizza); // => null
 
-To create an object which inherits from another object, use `beget` again.
+To create an object which inherits from another object, use `like` again.
 
-	var CheesePizza = beget(Pizza);
+	var CheesePizza = like(Pizza);
 	// CheesePizza inherits from Pizza
 
-The `beget` function accepts a second optional argument, a map of properties to add to the new object.
+The `like` function accepts a second optional argument, a map of properties to add to the new object.
 
-	var PepperoniPizza = beget(Pizza, {
+	var PepperoniPizza = like(Pizza, {
 		toppings: [ 'pepperoni' ]
 	});
 	PepperoniPizza.toppings; // => [ 'pepperoni' ]
 
-	var MediumPepperoniPizza = beget(PepperoniPizza, {
+	var MediumPepperoniPizza = like(PepperoniPizza, {
 		diameter: frozen('22cm')
 	});
 	MediumPepperoniPizza.diameter; // => '22cm'
@@ -80,24 +80,24 @@ These properties are, however, writable and configurable (by default).
 
 Properties inherit a false writable or configurable state.
 
-    FrozenPizza = beget(PepperoniPizza, Object.freeze({
+    FrozenPizza = like(PepperoniPizza, Object.freeze({
         thaw: function() { console.log('thawing!'); }
     }));
 
     FrozenPizza.thaw = 1;    // Error: `thaw` is non-writable
     delete FrozenPizza.thaw; // Error: `thaw` is non-configurable
 
-`beget` is like `Object.create`, except it has an easier, cleaner
+`like` is like `Object.create`, except it has an easier, cleaner
 syntax with reasonable defaults for the property descriptors.
 
-	var John = beget(Mike, {
+	var John = like(Mike, {
 		firstName: 'John'
 	});
 	John.getName(); // => 'John Campbell'
 
-Like `Object.create`, `beget` can be used on `null` to create an object with no inheritance.
+Like `Object.create`, `like` can be used on `null` to create an object with no inheritance.
 
-	var x = beget(null);
+	var x = like(null);
 	'hasOwnProperty' in x; // => false
 	// x does not inherit from Object (or anything)
 
@@ -105,8 +105,8 @@ Like `Object.create`, `beget` can be used on `null` to create an object with no 
 
 A property can be set to be non-configurable or non-writable using `sealed` and `frozen`. The former makes a property non-configurable, while the latter makes a property both non-configurable and non-writable.
 
-    var Canine = beget(),
-        Fox = beget(Canine, {
+    var Canine = like(),
+        Fox = like(Canine, {
             color: sealed('red'),
             trait: frozen('sneaky')
         });
@@ -119,12 +119,12 @@ A property can be set to be non-configurable or non-writable using `sealed` and 
     Fox.trait = 'lazy'; // Error
     Object.defineProperty(Fox, 'trait', { enumerable: true }); // Error
 
-### `spawn`
+### `beget`
 
-`spawn` is `beget + construct`. It calls `beget` on the first argument and passes any other arguments to an object's `construct` method (if present).
+`beget` is `like` + `init`. It calls `like` on the first argument and passes any other arguments to an object's `init` method (if present).
 
-	var Person = beget(null, {
-		construct: function(firstName, lastName) {
+	var Person = like(null, {
+		init: function(firstName, lastName) {
             this.firstName = firstName;
             this.lastName = lastName;
 		},
@@ -132,14 +132,14 @@ A property can be set to be non-configurable or non-writable using `sealed` and 
 			return this.firstName + ' ' + this.lastName;
 		}
 	});
-	var Mike = spawn(Person, 'Mike', 'Campbell');
+	var Mike = beget(Person, 'Mike', 'Campbell');
 	Mike.getName(); // => 'Mike Campbell'
 
 ### `extend`
 
 `extend` can be used to extend the properties of an object.
 
-	var Santa = beget();
+	var Santa = like();
 	extend(Santa, {
 		speak: function() {
 			return 'Ho ho ho!';
@@ -153,7 +153,7 @@ Properties added with `extend` are non-enumerable.
 
 `mixin` can be used to mix one object into another. It differs from `extend` in two ways: (1) properties remain enumerable if they are enumerable on the mixin, and (2) inherited properties are mixed in (up to a common parent).
 
-	var Santa = beget();
+	var Santa = like();
 	mixin(Santa, {
 		speak: function() {
 			return 'Ho ho ho!';
@@ -165,13 +165,13 @@ Properties added with `extend` are non-enumerable.
 	descriptor.writable;     // => true
 	descriptor.configurable; // => true
 
-    var Holidayer = beget(null, {
+    var Holidayer = like(null, {
         shout: function() {
             return 'Merry Christmas!';
         }
     });
 
-    var Elf = beget(Holidayer, {
+    var Elf = like(Holidayer, {
         makeToys: function() {
             return 'Fa la la!';
         }
@@ -192,17 +192,17 @@ The `inherits` function can be used to check inheritance
 
 ### Private Properties
 
-[Secrets](http://github.com/joijs/tempo/Secrets) or [WeakMaps](http://github.com/joijs/tempo/Harmonize) can be used alongside Spawn to associate private state with objects.
+[Secrets](http://github.com/joijs/tempo/Secrets) or [WeakMaps](http://github.com/joijs/tempo/Harmonize) can be used alongside beget to associate private state with objects.
 
     var Purse = (function() {
 
         var $ = createSecret();
 
-        return beget(null, {
+        return like(null, {
 
-            construct: function(balance) {
+            init: function(balance) {
                 if (Object(this) !== this)
-                    throw new TypeError('Construct must be called on an object.');
+                    throw new TypeError('Object expected');
                 $(this).balance = balance | 0;
             },
 
@@ -223,8 +223,8 @@ The `inherits` function can be used to check inheritance
 
     })();
 
-    var sally = spawn(Purse, 100),
-        jane = spawn(Purse, 250);
+    var sally = beget(Purse, 100),
+        jane = beget(Purse, 250);
 
     sally.deposit(jane, 50);
     console.log(
@@ -234,8 +234,8 @@ The `inherits` function can be used to check inheritance
 
 ### Example
 
-	var Vehicle = beget(null, {
-        construct: function(name) {
+	var Vehicle = like(null, {
+        init: function(name) {
             this.name = name;
         },
 		speed: 0,
@@ -255,20 +255,20 @@ The `inherits` function can be used to check inheritance
 	});
 
 	// MiniVan inherits all of Vehicle's properties
-	var MiniVan = beget(Vehicle, {
+	var MiniVan = like(Vehicle, {
 		acceleration: 6
 	});
 
-	// Racecar also inherits all of Vehicle's properties, but it overrides `construct`.
-	var Racecar = beget(Vehicle, {
-		construct: function(name) {
-            Vehicle.construct.call(this, name);
+	// Racecar also inherits all of Vehicle's properties, but it overrides `init`.
+	var Racecar = like(Vehicle, {
+		init: function(name) {
+            Vehicle.init.call(this, name);
 			this.acceleration = Math.floor(Math.random() * 20 + 40);
 		}
 	});
 
 	// peacockVan inherits from MiniVan
-	var peacockVan = spawn(MiniVan, 'peacock');
+	var peacockVan = beget(MiniVan, 'peacock');
 
 	peacockVan.start();       // => peacock started 6
 	peacockVan.accelerate();  // => peacock 12
@@ -276,9 +276,9 @@ The `inherits` function can be used to check inheritance
 	peacockVan.stop();        // => peacock stopped 0
 
 	// wallaceCar inherits from Racecar
-	var wallaceCar = spawn(Racecar, 'wallace');
+	var wallaceCar = beget(Racecar, 'wallace');
 	// andyCar also inherits from Racecar
-	var andyCar = spawn(Racecar, 'andy');
+	var andyCar = beget(Racecar, 'andy');
 
 	wallaceCar.start();       // => wallace started [random number]
 	andyCar.start();          // => andy started [random number]

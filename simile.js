@@ -1,5 +1,3 @@
-// TODO: Rename `beget` to `like` and `spawn` to `beget`?
-
 (function(global, Object, String, Error, TypeError) {
 
 	'use strict';
@@ -49,7 +47,7 @@
 			return O;
 		},
 
-		beget = function beget(/* proto, props */) {
+		like = function like(/* proto, props */) {
 
 			var proto = arguments[0] != null ? Object(arguments[0]) : null,
 				props = arguments[1] != null ? Object(arguments[1]) : null;
@@ -58,15 +56,15 @@
 
 		},
 
-		spawn = function spawn(obj/*, ...args */) {
-			// spawn is beget + construct.
+		beget = function beget(obj/*, ...args */) {
+			// beget is like + init.
 
 			var O = create(obj),
-				construct = O.construct;
+				init = O.init;
 
-			// TODO: Only pass own() versions of the objects to the constructor?
-			if (typeof construct == 'function')
-				apply(construct, O, slice(arguments, 1));
+			// TODO: Only pass own() versions of the objects to the initializer?
+			if (typeof init == 'function')
+				apply(init, O, slice(arguments, 1));
 
 			return O;
 
@@ -207,7 +205,7 @@
 		Descriptor = create(null),
 
 		sealed = function sealed(value) {
-			return beget(Descriptor, {
+			return like(Descriptor, {
 				value: value,
 				enumerable: false,
 				writable: true,
@@ -216,7 +214,7 @@
 		},
 
 		frozen = function frozen(value) {
-			return beget(Descriptor, {
+			return like(Descriptor, {
 				value: value,
 				enumerable: false,
 				writable: false,
@@ -293,10 +291,10 @@
 
 		},
 
-		Spawn = beget(null, {
+		simile = like(null, {
 
+			like: like,
 			beget: beget,
-			spawn: spawn,
 
 			frozen: frozen,
 			sealed: sealed,
@@ -309,14 +307,14 @@
 
 	// Export for Node.
 	if (typeof module == 'object' && typeof module.exports == 'object')
-		module.exports = Spawn;
+		module.exports = simile;
 
 	// Export for AMD
 	else if (typeof global.define == 'function' && global.define.amd)
-		global.define(function() { return Spawn; });
+		global.define(function() { return simile; });
 
 	// Export as a global
 	else
-		global.Spawn = Spawn;
+		global.simile = simile;
 
 })(typeof global != 'undefined' && Object(global) === global ? global : typeof window != 'undefined' ? window : this, Object, String, Error, TypeError);
