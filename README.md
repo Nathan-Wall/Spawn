@@ -7,6 +7,20 @@ This library provides a few basic functions which are oriented toward making pro
 
 ## Getting Started
 
+### Node
+
+#### Installation
+
+	npm install simile
+
+Then...
+
+	var simile = require('simile'),
+		like = simile.like,
+		beget = simile.beget;
+
+	// ...
+
 ### Browser
 
 #### Basic
