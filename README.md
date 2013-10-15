@@ -56,14 +56,16 @@ It's also possible to import simile as an AMD module.
 To create an object use `like`.
 
 	var Pizza = like();
-	// Pizza is an object which has no prototype.
+	// Pizza is an object which has no prototype -- it's not like anything else.
 
     Object.getPrototypeOf(Pizza); // => null
 
 To create an object which inherits from another object, use `like` again.
 
 	var CheesePizza = like(Pizza);
-	// CheesePizza inherits from Pizza
+	// CheesePizza is like Pizza
+
+An inheritance relationship is built: CheesePizza inherits from Pizza.
 
 The `like` function accepts a second optional argument, a map of properties to add to the new object.
 
@@ -312,3 +314,22 @@ Note the last example above in particular.  Although `PepperoniPizza` is like `P
 
 	wallaceCar.stop();        // => wallace [random number]
 	andyCar.stop();           // => andy [random number]
+
+---
+
+<p xmlns:dct="http://purl.org/dc/terms/" xmlns:vcard="http://www.w3.org/2001/vcard-rdf/3.0#">
+    <a rel="license"
+       href="http://creativecommons.org/publicdomain/zero/1.0/">
+        <img src="http://i.creativecommons.org/p/zero/1.0/88x31.png" style="border-style: none;" alt="CC0" />
+    </a>
+    <br />
+    To the extent possible under law,
+    <a rel="dct:publisher" href="http://github.com/Nathan-Wall"><span property="dct:title">Nathan Wall</span></a>
+    has waived all copyright and related or neighboring rights to
+    <span property="dct:title">promises-unwrapping</span>.
+
+    This work is published from:
+    <span property="vcard:Country" datatype="dct:ISO3166" content="US">
+      United States
+    </span>.
+</p>
