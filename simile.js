@@ -6,7 +6,6 @@
 		keys = Object.keys,
 		getOwnPropertyNames = Object.getOwnPropertyNames,
 		getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor,
-		defineProperty = Object.defineProperty,
 		getPrototypeOf = Object.getPrototypeOf,
 		isExtensible = Object.isExtensible,
 
@@ -35,13 +34,39 @@
 	 	// of memory & performance enhancements which are possible without direct eval.
 		_eval = eval,
 
+		// We only want to define with own properties of the descriptor.
+		define = (function(defineProperty) {
+			return function define(obj, name, desc) {
+				if ('value' in desc && !hasOwn(desc, 'value')
+					|| 'get' in desc && !hasOwn(desc, 'get')
+					|| 'set' in desc && !hasOwn(desc, 'set')
+					|| 'enumerable' in desc && !hasOwn(desc, 'enumerable')
+					|| 'writable' in desc && !hasOwn(desc, 'writable')
+					|| 'configurable' in desc && !hasOwn(desc, 'configurable'))
+					desc = createSafeDescriptor(desc);
+				return defineProperty(obj, name, desc);
+			};
+			function createSafeDescriptor(obj) {
+				if (obj == null) {
+					locked = true;
+					throw new TypeError('Argument cannot be null or undefined.');
+				}
+				obj = Object(obj);
+				var O = create(null),
+					k = keys(obj);
+				for (var i = 0, key = k[i]; key = k[i], i < k.length; i++)
+					O[key] = obj[key];
+				return O;
+			}
+		})(Object.defineProperty),
+
 		// Returns a clone of an object's own properties without a [[Prototype]].
 		own = function own(obj) {
 			if (obj == null || getPrototypeOf(obj) == null)
 				return obj;
 			var O = create(null);
 			forEach(getOwnPropertyNames(obj), function(key) {
-				defineProperty(O, key,
+				define(O, key,
 					getOwnPropertyDescriptor(obj, key));
 			});
 			return O;
@@ -160,7 +185,7 @@
 					if (!whatDesc || whatDesc.configurable)
 						// If mixinWhat does not already have the property, or if mixinWhat
 						// has the property and it's configurable, add it as is.
-						defineProperty(mixinWhat, name, withDesc);
+						define(mixinWhat, name, withDesc);
 					else if (whatDesc.writable && 'value' in withDesc)
 						// If the property is writable and the withDesc has a value, write the value.
 						mixinWhat[name] = withDesc.value;
@@ -195,7 +220,7 @@
 						withDesc = descriptors[name];
 
 					if (!whatDesc || whatDesc.configurable)
-						defineProperty(extendWhat, name, withDesc);
+						define(extendWhat, name, withDesc);
 					else if (whatDesc.writable && 'value' in withDesc)
 						extendWhat[name] = withDesc.value;
 
