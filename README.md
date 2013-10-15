@@ -21,7 +21,7 @@ Then...
 
 	var simile = require('simile'),
 		like = simile.like,
-		beget = simile.beget;
+		forge = simile.forge;
 
 	// ...
 
@@ -34,7 +34,7 @@ Download `simile.js` and serve it in a `<script>` tag.
     <script type="text/javascript" src="path/to/simile.js"></script>
     <script type="text/javascript">
         var like = simile.like,
-        	beget = simile.beget;
+        	forge = simile.forge;
     </script>
 
 Inside another script, you can use `secrets.create()` to create a secret coupler (see below).
@@ -45,7 +45,7 @@ It's also possible to import simile as an AMD module.
 
     require([ 'path/to/simile' ], function(simile) {
         var like = simile.like,
-        	beget = simile.beget;
+        	forge = simile.forge;
         // ...
     });
 
@@ -139,9 +139,9 @@ A property can be set to be non-configurable or non-writable using `sealed` and 
     Fox.trait = 'lazy'; // Error
     Object.defineProperty(Fox, 'trait', { enumerable: true }); // Error
 
-### `beget`
+### `forge`
 
-`beget` is `like` + `init`. It calls `like` on the first argument and passes any other arguments to an object's `init` method (if present).
+`forge` is `like` + `init`. It calls `like` on the first argument and passes any other arguments to an object's `init` method (if present).
 
 	var Person = like(null, {
 		init: function(firstName, lastName) {
@@ -152,7 +152,7 @@ A property can be set to be non-configurable or non-writable using `sealed` and 
 			return this.firstName + ' ' + this.lastName;
 		}
 	});
-	var Mike = beget(Person, 'Mike', 'Campbell');
+	var Mike = forge(Person, 'Mike', 'Campbell');
 	Mike.getName(); // => 'Mike Campbell'
 
 ### `extend`
@@ -215,7 +215,7 @@ Note the last example above in particular.  Although `PepperoniPizza` is like `P
 
 ### Private Properties
 
-[Secrets](http://github.com/joijs/tempo/Secrets) or [WeakMaps](http://github.com/joijs/tempo/Harmonize) can be used alongside beget to associate private state with objects.
+[Secrets](http://github.com/joijs/tempo/Secrets) or [WeakMaps](http://github.com/joijs/tempo/Harmonize) can be used alongside simile to associate private state with objects.
 
     var Purse = (function() {
 
@@ -246,8 +246,8 @@ Note the last example above in particular.  Although `PepperoniPizza` is like `P
 
     })();
 
-    var sally = beget(Purse, 100),
-        jane = beget(Purse, 250);
+    var sally = forge(Purse, 100),
+        jane = forge(Purse, 250);
 
     sally.deposit(jane, 50);
     console.log(
@@ -291,7 +291,7 @@ Note the last example above in particular.  Although `PepperoniPizza` is like `P
 	});
 
 	// peacockVan inherits from MiniVan
-	var peacockVan = beget(MiniVan, 'peacock');
+	var peacockVan = forge(MiniVan, 'peacock');
 
 	peacockVan.start();       // => peacock started 6
 	peacockVan.accelerate();  // => peacock 12
@@ -299,9 +299,9 @@ Note the last example above in particular.  Although `PepperoniPizza` is like `P
 	peacockVan.stop();        // => peacock stopped 0
 
 	// wallaceCar inherits from Racecar
-	var wallaceCar = beget(Racecar, 'wallace');
+	var wallaceCar = forge(Racecar, 'wallace');
 	// andyCar also inherits from Racecar
-	var andyCar = beget(Racecar, 'andy');
+	var andyCar = forge(Racecar, 'andy');
 
 	wallaceCar.start();       // => wallace started [random number]
 	andyCar.start();          // => andy started [random number]

@@ -56,8 +56,8 @@
 
 		},
 
-		beget = function beget(obj/*, ...args */) {
-			// beget is like + init.
+		forge = function forge(obj/*, ...args */) {
+			// forge is like + init.
 
 			var O = create(obj),
 				init = O.init;
@@ -210,7 +210,7 @@
 		simile = like(null, {
 
 			like: like,
-			beget: beget,
+			forge: forge,
 
 			frozen: frozen,
 			sealed: sealed,
