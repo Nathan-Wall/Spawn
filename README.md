@@ -121,6 +121,34 @@ Like `Object.create`, `like` can be used on `null` to create an object with no i
 	'hasOwnProperty' in x; // => false
 	// x does not inherit from Object (or anything)
 
+### `forge`
+
+`forge` is `like` + `init`. It calls `like` on the first argument and passes any other arguments to an object's `init` method (if present).
+
+	var Person = like(null, {
+		init: function(firstName, lastName) {
+            this.firstName = firstName;
+            this.lastName = lastName;
+		},
+		getName: function() {
+			return this.firstName + ' ' + this.lastName;
+		}
+	});
+	var Mike = forge(Person, 'Mike', 'Campbell');
+	Mike.getName(); // => 'Mike Campbell'
+
+### `isLike`
+
+The `isLike` function can be used to check inheritance
+(`instanceof` will not work because you're not checking against a constructor).
+
+	isLike(PepperoniPizza, Pizza);            // => true
+	isLike(MediumPepperoniPizza, Pizza);      // => true
+	isLike(PepperoniPizza, Santa);            // => false
+	isLike(Pizza, PepperoniPizza);            // => false
+
+Note the last example above in particular.  Although `PepperoniPizza` is like `Pizza`, `Pizza` is not like `PepperoniPizza`.  This is because `PepperoniPizza` inherits `Pizza`'s properties, but `Pizza` doesn't  inherit `PepperoniPizza`'s properties.
+
 ### `sealed` and `frozen`
 
 A property can be set to be non-configurable or non-writable using `sealed` and `frozen`. The former makes a property non-configurable, while the latter makes a property both non-configurable and non-writable.
@@ -138,22 +166,6 @@ A property can be set to be non-configurable or non-writable using `sealed` and 
     // And `trait` is neither writable nor configurable
     Fox.trait = 'lazy'; // Error
     Object.defineProperty(Fox, 'trait', { enumerable: true }); // Error
-
-### `forge`
-
-`forge` is `like` + `init`. It calls `like` on the first argument and passes any other arguments to an object's `init` method (if present).
-
-	var Person = like(null, {
-		init: function(firstName, lastName) {
-            this.firstName = firstName;
-            this.lastName = lastName;
-		},
-		getName: function() {
-			return this.firstName + ' ' + this.lastName;
-		}
-	});
-	var Mike = forge(Person, 'Mike', 'Campbell');
-	Mike.getName(); // => 'Mike Campbell'
 
 ### `extend`
 
@@ -201,17 +213,54 @@ Properties added with `extend` are non-enumerable.
     Santa.shout();    // => 'Merry Christmas!'
     Santa.makeToys(); // => 'Fa la la!'
 
-### `isLike`
+### `adapt`
 
-The `isLike` function can be used to check inheritance
-(`instanceof` will not work because you're not checking against a constructor).
+`adapt` will convert a regular JavaScript-style constructor to a simile-style prototype.
 
-	isLike(PepperoniPizza, Pizza);            // => true
-	isLike(MediumPepperoniPizza, Pizza);      // => true
-	isLike(PepperoniPizza, Santa);            // => false
-	isLike(Pizza, PepperoniPizza);            // => false
+    var List = adapt(Array);
 
-Note the last example above in particular.  Although `PepperoniPizza` is like `Pizza`, `Pizza` is not like `PepperoniPizza`.  This is because `PepperoniPizza` inherits `Pizza`'s properties, but `Pizza` doesn't  inherit `PepperoniPizza`'s properties.
+    var toppings = forge(List);
+    toppings.push('Pepperoni');
+    toppings.push('Cheese');
+    toppings.push('Guacomole');
+
+    toppings.join(', '); // => 'Pepperoni, Cheese, Guacomole'
+
+Note that this doesn't really work for other built-ins in ES5 due to a lack of [@@create](http://people.mozilla.org/~jorendorff/es6-draft.html#sec-well-known-symbols-and-intrinsics). Simile will be modified to support this in ES6, when available, but for ES5 users, avoid using `adapt` for built-ins for now.
+
+It still works great for user-land constructors!
+
+    // Code from some other library...
+    function Person(name) {
+    	this.name = name;
+    }
+    Person.prototype.sayHi = function() {
+    	return 'Hello, my name is ' + this.name;
+    };
+
+    // You want to use the simile-style
+    var SPerson = adapt(Person);
+
+    var paul = forge(SPerson, 'Paul');
+    paul.sayHi(); // => 'Hello, my name is Paul'
+
+### `toConstructor`
+
+`toConstructor` is the inverse of `adapt`.  It takes a simile-style prototype and converts it to a regular JavaScript-style constructor.
+
+    var Person = like(null, {
+    	init: function(name) {
+    		this.name = name;
+    	},
+    	sayHi: function() {
+    		return 'Hello, my name is ' + this.name;
+    	}
+    });
+
+    var CPerson = toConstructor(Person);
+
+    var sally = new CPerson('Sally');
+    sally.sayHi(); // => 'Hello, my name is Sally'
 
 ### Private Properties
 
