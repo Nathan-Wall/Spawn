@@ -232,6 +232,128 @@
 
 		},
 
+		// Creates a wrapper function with the same length as the original.
+		createWrapper = (function() {
+
+			// Let's memoize wrapper generators to avoid using eval too often.
+			var generators = { },
+
+				numGenerators = 0,
+
+				// Let's limit length to 512 for now. If someone wants to up it, they can.
+				MAX_WRAPPER_LENGTH = 512,
+
+				// Limit the number of generators which are cached to preserve memory in the unusual case that
+				// someone creates many generators. We don't go to lengths to make the cache drop old, unused
+				// values as there really shouldn't be a need for so many generators in the first place.
+				MAX_CACHED_GENERATORS = 64;
+
+			return function createWrapper(/* original, length, f */$0, $1) {
+
+				var original = arguments[0];
+
+				if (typeof original != 'function')
+					throw new TypeError('Function expected: ' + original);
+
+				var length = typeof arguments[2] != 'undefined' ? arguments[1] : original.length,
+					f = typeof arguments[2] != 'undefined' ? arguments[2] : arguments[1];
+
+				if (length < 0) length = 0;
+				length = length >>> 0;
+				if (length > MAX_WRAPPER_LENGTH)
+					throw new Error('Maximum length allowed is ' + MAX_WRAPPER_LENGTH + ': ' + length);
+
+				var args = create(null),
+					generator = generators[length];
+
+				args.length = 0;
+
+				if (typeof f != 'function')
+					throw new TypeError('Function expected: ' + f);
+
+				if (!generator) {
+
+					for (var i = 0; i < length; i++)
+						push(args, '$' + i);
+
+					generator = _eval(
+						'(function(wrapF, original, name, apply, _eval) {'
+							+ '"use strict";'
+							+ 'var wrapper = _eval("(function(wrapF, original, name, apply) {'
+								+ 'return (function " + name + "_(' + join(args, ',') + ') {'
+									+ 'return apply(wrapF, this, arguments);'
+								+ '});'
+							+ '})")(wrapF, original, name, apply);'
+							+ 'wrapper.original = original;'
+							+ 'return wrapper;'
+						+ '})'
+					);
+
+					if (numGenerators < MAX_CACHED_GENERATORS) {
+						generators[length] = generator;
+						numGenerators++;
+					}
+
+				}
+
+				var name = original.name;
+				if (name === undefined)
+					name = 'anonymous';
+				else
+					name = String(name);
+
+				return generator(f, original, replace(name, /\W/g, '_'), apply, _eval);
+
+			};
+
+		})(),
+
+		// Convert a regular JS constructor to a simile-style prototype
+		// Please note: In order for adapt to work 100% correctly on built-ins, ES6 @@create is needed.
+		// It is still pretty much possible to use adapt on Array, but it probably shouldn't be used
+		// on any other built-ins (outside of an ES6 environment with an updated adapt to use @@create).
+		adapt = function adapt(constructor) {
+
+			if (typeof constructor != 'function'
+				|| !hasOwn(constructor, 'prototype'))
+				throw new TypeError('Constructor expected');
+
+			var proto = like(constructor.prototype);
+
+			define(proto, 'init', {
+				value: createWrapper(constructor, function init() {
+					apply(constructor, this, arguments);
+				}),
+				writable: true,
+				enumerable: false,
+				configurable: true
+			});
+
+			return proto;
+
+		},
+
+		// Convert a simile-style prototype to a regular JS constructor
+		toConstructor = function toConstructor(proto) {
+
+			var I = proto.init,
+				constructor;
+
+			if (typeof I == 'function')
+				constructor = createWrapper(I, function() {
+					apply(I, this, arguments);
+				});
+			else if (I === undefined)
+				constructor = function() { };
+			else
+				throw new TypeError('Function expected');
+
+			constructor.prototype = like(proto, { init: undefined });
+
+			return constructor;
+
+		},
+
 		simile = like(null, {
 
 			like: like,
@@ -242,7 +364,10 @@
 
 			isLike: isLike,
 			extend: extend,
-			mixin: mixin
+			mixin: mixin,
+
+			adapt: adapt,
+			toConstructor: toConstructor
 
 		});
 
