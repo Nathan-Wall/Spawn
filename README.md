@@ -326,7 +326,7 @@ Note the last example above in particular.  Although `PepperoniPizza` is like `P
     To the extent possible under law,
     <a rel="dct:publisher" href="http://github.com/Nathan-Wall"><span property="dct:title">Nathan Wall</span></a>
     has waived all copyright and related or neighboring rights to
-    <span property="dct:title">promises-unwrapping</span>.
+    <span property="dct:title">Simile</span>.
 
     This work is published from:
     <span property="vcard:Country" datatype="dct:ISO3166" content="US">
