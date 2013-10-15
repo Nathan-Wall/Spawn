@@ -1,6 +1,6 @@
 {
   "name": "simile",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A small library which attempts to push prototypal inheritance to its natural conclusions in JavaScript. For ECMAScript 5.",
   "main": "simile.js",
   "scripts": {
