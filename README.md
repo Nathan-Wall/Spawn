@@ -98,7 +98,7 @@ These properties are, however, writable and configurable (by default).
 	MediumPepperoniPizza.diameter; // => '20cm'
 	MediumPepperoniPizza.toppings; // => undefined
 
-Properties inherit a false writable or configurable state.
+Properties can be added with a false writable or configurable state.
 
     FrozenPizza = like(PepperoniPizza, Object.freeze({
         thaw: function() { console.log('thawing!'); }
