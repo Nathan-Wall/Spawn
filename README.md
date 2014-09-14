@@ -110,11 +110,6 @@ Properties can be added with a false writable or configurable state.
 `like` is like `Object.create`, except it has an easier, cleaner
 syntax with reasonable defaults for the property descriptors.
 
-	var John = like(Mike, {
-		firstName: 'John'
-	});
-	John.getName(); // => 'John Campbell'
-
 Like `Object.create`, `like` can be used on `null` to create an object with no inheritance.
 
 	var x = like(null);
@@ -136,6 +131,13 @@ Like `Object.create`, `like` can be used on `null` to create an object with no i
 	});
 	var Mike = forge(Person, 'Mike', 'Campbell');
 	Mike.getName(); // => 'Mike Campbell'
+
+You can still use `like` on a forged object.
+
+	var John = like(Mike, {
+	    firstName: 'John'
+	});
+	John.getName(); // => 'John Campbell'
 
 ### `isLike`
 
